@@ -30,12 +30,18 @@ jobs:
       # install the legacy `tools` package, which the SDK repository no longer
       # serves, and the step fails before the build starts.
       #
+      # `sdkmanager` is invoked by absolute path — it lives under
+      # cmdline-tools/latest/bin, which is not on the runner's PATH.
+      #
       # The platform is `android-37.0`, not `android-37` — the minor-suffixed
       # naming is what the Compose BOM's AAR metadata requires.
       - name: Install SDK packages
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
-          sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager \
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" \
             "platforms;android-37.0" \
             "build-tools;36.0.0" \
             "build-tools;37.0.0" \
