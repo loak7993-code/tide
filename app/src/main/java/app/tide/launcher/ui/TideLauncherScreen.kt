@@ -1,6 +1,8 @@
 package app.tide.launcher.ui
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -56,6 +58,9 @@ import app.tide.launcher.data.AppEntry
 import app.tide.launcher.debug.DebugOverlay
 import app.tide.launcher.debug.logi
 import app.tide.launcher.ui.components.GlassSurface
+import app.tide.launcher.ui.components.HomeMenuSheet
+import app.tide.launcher.ui.components.FolderPickerSheet
+import app.tide.launcher.ui.components.FolderSheet
 import app.tide.launcher.ui.components.OceanBackground
 import app.tide.launcher.ui.drawer.DrawerScreen
 import app.tide.launcher.ui.home.HomeSurface
@@ -64,6 +69,10 @@ import app.tide.launcher.ui.theme.LocalOceanPalette
 import app.tide.launcher.ui.theme.Motion
 import app.tide.launcher.ui.theme.Radius
 import app.tide.launcher.ui.theme.TideTheme
+import app.tide.launcher.ui.widgets.WidgetArea
+import app.tide.launcher.ui.widgets.WidgetHostController
+import app.tide.launcher.ui.widgets.WidgetPickerSheet
+import app.tide.launcher.ui.widgets.rememberWidgetHost
 import app.tide.launcher.ui.theme.TideTypography
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -87,6 +96,12 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
     // Home shrinks away before the target activity takes over, so the handover
     // reads as leaving the surface rather than as the launcher blinking out.
     var launching by remember { mutableStateOf(false) }
+
+    val widgetHost = rememberWidgetHost()
+    var showWidgetPicker by remember { mutableStateOf(false) }
+    // The app whose "Add to folder" was tapped; the picker acts on it.
+    var folderTarget by remember { mutableStateOf<AppEntry?>(null) }
+    var showHomeMenu by remember { mutableStateOf(false) }
     val launchScale = androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (launching) 1.14f else 1f,
         animationSpec = Motion.Emphasis,
@@ -167,7 +182,7 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
             ) { surface ->
                 when (surface) {
                     Surface.Home -> HomeSurface(
-                        apps = state.gridApps,
+                        items = state.homeItems,
                         dockApps = state.dockApps,
                         iconShape = state.settings.iconShape,
                         showLabels = state.settings.showLabels,
@@ -175,9 +190,26 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
                         contentPadding = surfacePadding,
                         onLaunch = ::launch,
                         onLongPress = ::openMenu,
+                        onOpenFolder = viewModel::openFolder,
+                        onLongPressFolder = viewModel::openFolderMenu,
                         onOpenDrawer = { viewModel.setSurface(Surface.Drawer) },
                         onOpenSearch = { viewModel.setSurface(Surface.Drawer) },
                         onOpenSettings = { viewModel.setSurface(Surface.Settings) },
+                        onReorderDock = viewModel::moveDockEntry,
+                        onLongPressEmpty = { showHomeMenu = true },
+                        widgetSlot = {
+                            WidgetArea(
+                                widgetIds = state.settings.widgetIds,
+                                controller = widgetHost,
+                                onAddWidget = { showWidgetPicker = true },
+                                onRemoveWidget = { id ->
+                                    widgetHost.deleteWidget(id)
+                                    viewModel.setWidgetIds(
+                                        state.settings.widgetIds - id,
+                                    )
+                                },
+                            )
+                        },
                     )
 
                     Surface.Drawer -> DrawerScreen(
@@ -209,6 +241,8 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
                         onDoubleTapChange = viewModel::setDoubleTapToSearch,
                         onDockCapacityChange = viewModel::setDockCapacity,
                         onDebugOverlayChange = viewModel::setDebugOverlay,
+                        widgetCount = state.settings.widgetIds.size,
+                        onAddWidget = { showWidgetPicker = true },
                         onUnhide = viewModel::toggleHidden,
                     )
                 }
@@ -252,9 +286,89 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
                 onDismiss = viewModel::dismissMenu,
                 onToggleDock = { viewModel.toggleDock(entry) },
                 onToggleHide = { viewModel.toggleHidden(entry) },
+                onAddToFolder = {
+                    viewModel.dismissMenu()
+                    folderTarget = entry
+                },
+            )
+        }
+
+        // ── folder ───────────────────────────────────────────────────────────
+        state.folderFor?.let { folder ->
+            FolderSheet(
+                folder = folder,
+                apps = state.appsIn(folder),
+                iconShape = state.settings.iconShape,
+                showLabels = state.settings.showLabels,
+                columns = state.settings.gridColumns,
+                onLaunch = ::launch,
+                onLongPress = { viewModel.dismissFolder(); openMenu(it) },
+                onRename = { viewModel.renameFolder(folder, it) },
+                onRemove = { viewModel.removeFolder(folder) },
+                onDismiss = viewModel::dismissFolder,
+            )
+        }
+
+        // ── home menu (long-press on empty space) ────────────────────────────
+        if (showHomeMenu) {
+            HomeMenuSheet(
+                onDismiss = { showHomeMenu = false },
+                onAddWidget = {
+                    showHomeMenu = false
+                    showWidgetPicker = true
+                },
+                onOpenSettings = {
+                    showHomeMenu = false
+                    viewModel.setSurface(Surface.Settings)
+                },
+            )
+        }
+
+        // ── folder picker ────────────────────────────────────────────────────
+        folderTarget?.let { target ->
+            FolderPickerSheet(
+                folders = state.settings.folders,
+                onDismiss = { folderTarget = null },
+                onPickExisting = { folder ->
+                    viewModel.moveToFolder(target.key, folder.id)
+                    folderTarget = null
+                },
+                onCreateNew = {
+                    viewModel.createFolder(target.label, listOf(target.key))
+                    folderTarget = null
+                },
+            )
+        }
+
+        // ── widgets ──────────────────────────────────────────────────────────
+        if (showWidgetPicker) {
+            WidgetPickerSheet(
+                controller = widgetHost,
+                onDismiss = { showWidgetPicker = false },
+                onPicked = { provider ->
+                    showWidgetPicker = false
+                    val activity = context.findActivity()
+                    val id = widgetHost.addWidget(provider, activity)
+                    if (id == -1) {
+                        viewModel.consumeNotice()
+                    } else if (provider.configure != null) {
+                        // Persist only once configuration reports back.
+                        viewModel.beginWidgetConfiguration(id)
+                    } else {
+                        widgetHost.onConfigureResult(succeeded = true, appWidgetId = id)
+                        viewModel.finishWidgetConfiguration(kept = true)
+                    }
+                },
             )
         }
     }
+}
+
+/** Unwraps the Activity from whatever ContextWrapper Compose is holding. */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 /** Compact notice bar with an optional undo. */

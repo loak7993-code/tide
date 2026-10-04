@@ -13,6 +13,7 @@ import app.tide.launcher.core.launchComponent
 import app.tide.launcher.debug.logi
 import app.tide.launcher.ui.LauncherViewModel
 import app.tide.launcher.ui.TideLauncherScreen
+import app.tide.launcher.ui.widgets.WidgetHostController
 
 class MainActivity : ComponentActivity() {
 
@@ -41,6 +42,19 @@ class MainActivity : ComponentActivity() {
         // Pressing HOME re-delivers MAIN/HOME to the existing instance rather
         // than creating a new one, so anything requested has to be read here.
         handleLaunchIntent(intent)
+    }
+
+    /**
+     * Receives the result of a widget provider's configuration activity.
+     *
+     * A provider that needs configuring refuses to bind until this returns
+     * `RESULT_OK`, so the widget is only persisted once it comes back
+     * successfully.
+     */
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != WidgetHostController.CONFIGURE_REQUEST_CODE) return
+        viewModel.finishWidgetConfiguration(kept = resultCode == RESULT_OK)
     }
 
     override fun onResume() {

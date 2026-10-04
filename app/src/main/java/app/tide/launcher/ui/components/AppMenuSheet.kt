@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Visibility
@@ -71,6 +72,7 @@ fun AppMenuSheet(
     onDismiss: () -> Unit,
     onToggleDock: () -> Unit,
     onToggleHide: () -> Unit,
+    onAddToFolder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -92,6 +94,11 @@ fun AppMenuSheet(
                 if (isDocked) R.string.action_remove_from_dock else R.string.action_add_to_dock,
             ),
             onClick = { onToggleDock(); onDismiss() },
+        ),
+        MenuAction(
+            icon = Icons.Rounded.CreateNewFolder,
+            label = "Add to folder",
+            onClick = { onAddToFolder() },
         ),
         MenuAction(
             icon = if (isHidden) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,

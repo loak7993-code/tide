@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -36,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.tide.launcher.R
 import app.tide.launcher.data.AppEntry
@@ -58,6 +60,7 @@ import app.tide.launcher.ui.theme.TideTypography
 fun SettingsScreen(
     settings: TideSettings,
     hiddenApps: List<AppEntry>,
+    widgetCount: Int,
     contentPadding: PaddingValues,
     onClose: () -> Unit,
     onThemeChange: (TideTheme) -> Unit,
@@ -69,6 +72,7 @@ fun SettingsScreen(
     onDoubleTapChange: (Boolean) -> Unit,
     onDockCapacityChange: (Int) -> Unit,
     onDebugOverlayChange: (Boolean) -> Unit,
+    onAddWidget: () -> Unit,
     onUnhide: (AppEntry) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -226,6 +230,28 @@ fun SettingsScreen(
             }
         }
 
+        // ── widgets ─────────────────────────────────────────────────────────
+        item(key = "sec_widgets") {
+            SectionLabel(stringResource(R.string.section_widgets))
+        }
+
+        item(key = "widgets") {
+            GlassCard {
+                Column {
+                    ActionRow(
+                        title = stringResource(R.string.setting_add_widget),
+                        summary = if (widgetCount == 0) {
+                            stringResource(R.string.setting_widgets_none)
+                        } else {
+                            stringResource(R.string.setting_widgets_count, widgetCount)
+                        },
+                        icon = Icons.Rounded.Widgets,
+                        onClick = onAddWidget,
+                    )
+                }
+            }
+        }
+
         // ── hidden apps ──────────────────────────────────────────────────────
         if (hiddenApps.isNotEmpty()) {
             item(key = "sec_hidden") {
@@ -305,7 +331,9 @@ private fun SectionLabel(text: String) {
         text = text.uppercase(),
         style = TideTypography.labelSmall,
         color = palette.onSurfaceMuted,
-        modifier = Modifier.padding(start = 4.dp, top = 6.dp),
+        modifier = Modifier
+            .padding(start = 4.dp, top = 6.dp)
+            .testTag("section_${text.lowercase()}"),
     )
 }
 
@@ -460,6 +488,42 @@ private fun StepperRow(
             enabled = canIncrement,
             onClick = onIncrement,
         )
+    }
+}
+
+/** A tappable row with a leading glyph. */
+@Composable
+private fun ActionRow(
+    title: String,
+    summary: String?,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    val palette = LocalOceanPalette.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = palette.accent,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(text = title, style = TideTypography.bodyLarge, color = palette.onGlass)
+            if (summary != null) {
+                Text(
+                    text = summary,
+                    style = TideTypography.bodyMedium,
+                    color = palette.onSurfaceMuted,
+                )
+            }
+        }
     }
 }
 

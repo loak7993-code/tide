@@ -39,6 +39,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.tide.launcher.data.AppEntry
@@ -94,7 +95,10 @@ fun HomeSurface(
     }
 
     Column(
-        modifier = modifier.fillMaxSize().padding(contentPadding),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .testTag(TEST_TAG_HOME),
     ) {
         // ── clock zone: swipe up for the drawer, double tap for search ────────
         Box(
@@ -260,6 +264,7 @@ private fun DockSettingsSlot(onClick: () -> Unit) {
             .size(58.dp)
             .clip(CircleShape)
             .background(palette.glassBorder.copy(alpha = 0.16f))
+            .testTag(TEST_TAG_OPEN_SETTINGS)
             .combinedClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -282,6 +287,7 @@ private fun ColumnScope.SwipeHint(onClick: () -> Unit) {
             .size(width = 46.dp, height = 4.dp)
             .clip(CircleShape)
             .background(palette.glassBorder.copy(alpha = 0.55f))
+            .testTag(TEST_TAG_OPEN_DRAWER)
             .combinedClickable(onClick = onClick),
     )
 }

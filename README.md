@@ -41,9 +41,13 @@ busy enough to compete with the icons on top of it.
 | | |
 |---|---|
 | **Home screen** | App grid plus a hotseat dock, both persisted across restarts. |
+| **Dock reordering** | Long-press a dock icon and drag; a long press without movement opens its menu. |
+| **Folders** | Group apps into a named folder; tap to open, rename or dissolve it. |
 | **App drawer** | Letter headers and an A–Z jump rail, reachable by swiping the clock. |
 | **Fuzzy search** | Subsequence matching — `gm` finds *Gmail*, `ch` finds *Chrome* and *Clock*. |
-| **Long press** | Pin to dock, hide, app info, uninstall, and any shortcuts an app declares. |
+| **Long press** | Pin to dock, file into a folder, hide, app info, uninstall, declared shortcuts. |
+| **Home menu** | Long-press empty space for *Add widget* and *Home screen settings*. |
+| **Widgets** | Lists every installed widget provider and hosts the ones you place. |
 | **Ocean motion** | Layered animated background; can be switched off in Settings. |
 | **Four themes** | Sunrise (light), Tide, Deep, Night tide — each a full palette, not a hue rotation. |
 | **Icon shapes** | Squircle, circle or rounded, applied live without re-rasterising. |
@@ -139,27 +143,51 @@ produces an installable artifact. That file and any `*.jks` are gitignored.
 ```
 app/src/main/java/app/tide/launcher/
 ├── core/          LauncherActions, Haptics, AppShortcuts
-├── data/          AppRepository, IconCache, SettingsStore, Fuzzy
+├── data/          AppRepository, IconCache, SettingsStore, Fuzzy, Folder
 ├── debug/         TideLog, DebugOverlay
-└── ui/
-    ├── components/ OceanBackground, AppIconTile, GlassSurface, AppMenuSheet
-    ├── drawer/     DrawerScreen
-    ├── home/       HomeSurface, ClockWidget
-    ├── settings/   SettingsScreen
-    └── theme/      OceanPalette, Motion, Type, Shape
+├── ui/
+│   ├── components/ OceanBackground, AppIconTile, GlassSurface,
+│   │               AppMenuSheet, FolderSheet, FolderPickerSheet, HomeMenuSheet
+│   ├── drawer/     DrawerScreen
+│   ├── home/       HomeSurface, ClockWidget
+│   ├── settings/   SettingsScreen
+│   ├── theme/      OceanPalette, Motion, Type, Shape
+│   └── widgets/    WidgetHostController, WidgetArea
+└── ui/            LauncherViewModel, TideLauncherScreen
 ```
+
+### A note on the dock gesture
+
+Long-pressing a dock icon has to do two things: start a drag, *and* open the
+menu if the user just wanted to look at it. These are the same gesture, so they
+share **one** recogniser — `combinedClickable`'s `onLongClick` is deliberately
+absent, because it and `detectDragGesturesAfterLongPress` both fire on the same
+hold and whichever ran first would win. Instead the drag recogniser owns the
+gesture, and a release without movement is reinterpreted as a long press.
 
 ## Status
 
-Working and installable — verified on an API 35 emulator.
+Working and installable — verified on an API 35 emulator. 21 unit tests over the
+scorer and settings invariants, and 6 Compose instrumentation tests driving the
+home screen, drawer, search, home menu and settings.
+
+**Widgets are half-done.** The host plumbing is in place and works: the provider
+list is enumerated, the picker renders, the host id is persisted, and the render
+path uses `AppWidgetHost.createView`. But *placing* a widget does not work on the
+API 35 emulator image — `AppWidgetManager.bindAppWidgetIdIfAllowed` returns
+`false` for every provider tried, across two unrelated packages, with Tide
+correctly registered as the default home app. The refusal is silent on the system
+side, so the cause is unresolved. The code path is the documented one (bind, then
+`startAppWidgetConfigureActivityForResult` for providers that need configuring)
+and the picker degrades to an explanatory row when placement fails, but this has
+not been observed rendering on a device.
 
 Not done yet:
 
-- Widget host
-- Folders
-- Drag-to-reorder in the dock
-- Instrumentation (UI) tests — unit tests cover the scorer and settings
-  invariants, but there is no UI test suite yet
+- Widget placement (above)
+- Grid drag-and-drop (only the dock reorders)
+- Folders cannot nest, and are created one app at a time rather than by
+  multi-selecting
 - Licence (see below)
 
 ## Licence

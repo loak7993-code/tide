@@ -33,6 +33,7 @@ fun AppMenuHost(
     onDismiss: () -> Unit,
     onToggleDock: () -> Unit,
     onToggleHide: () -> Unit,
+    onAddToFolder: () -> Unit,
 ) {
     val palette = LocalOceanPalette.current
 
@@ -60,6 +61,7 @@ fun AppMenuHost(
             onDismiss = onDismiss,
             onToggleDock = onToggleDock,
             onToggleHide = onToggleHide,
+            onAddToFolder = onAddToFolder,
         )
     }
 }
