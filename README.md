@@ -1,77 +1,126 @@
+<div align="center">
+
 # Tide
 
-An Android home-screen launcher built around moving water: a drifting ocean
-gradient, caustic light, and glass surfaces floating on top of it.
-
-<p align="center"><em>Kotlin · Jetpack Compose · Material 3 · minSdk 26 · targetSdk 36</em></p>
+**An Android home-screen launcher built around moving water.**
 
 <p align="center">
-  <img src="docs/screens/home.png" width="30%" alt="Home: clock, tide gauge, app grid and dock over the ocean gradient">
-  <img src="docs/screens/drawer.png" width="30%" alt="App drawer with letter headers and an A–Z jump rail">
+  <img src="docs/screens/home.png" width="30%" alt="Home screen: clock, tide gauge, app grid and dock floating over the ocean gradient">
+  <img src="docs/screens/drawer.png" width="30%" alt="App drawer with letter headers and an A-Z jump rail">
   <img src="docs/screens/long-press.png" width="30%" alt="Long-press sheet over the dimmed home screen">
 </p>
 
 <p align="center">
   <img src="docs/screens/search.png" width="30%" alt="Fuzzy search matching 'gm' to Gmail">
-  <img src="docs/screens/settings.png" width="30%" alt="Settings: themes, icon shapes, grid density">
+  <img src="docs/screens/settings.png" width="30%" alt="Settings: theme swatches, icon shapes, grid density">
 </p>
 
-## What it does
+[![build](https://github.com/loak7993-code/tide/actions/workflows/build.yml/badge.svg)](https://github.com/loak7993-code/tide/actions/workflows/build.yml)
+[![kotlin](https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?style=flat&logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![compose](https://img.shields.io/badge/Jetpack%20Compose-2026.09-4285F4?style=flat&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+[![minsdk](https://img.shields.io/badge/minSdk-26-green?style=flat)](https://developer.android.com/about/versions/oreo)
+[![targetsdk](https://img.shields.io/badge/targetSdk-36-green?style=flat)](https://developer.android.com/about/versions)
+
+</div>
+
+---
+
+## What it is
+
+Most launchers treat the background as wallpaper — a still image or a flat fill.
+Tide treats it as the product. The water is a live, layered composition: a depth
+gradient, a sun sitting below the surface, caustic pools drifting on different
+periods, and a swell moving across the horizon. Everything else floats on top of
+it as glass.
+
+The result is a launcher that never looks the same twice, but is also never
+busy enough to compete with the icons on top of it.
+
+## Features
 
 | | |
 |---|---|
 | **Home screen** | App grid plus a hotseat dock, both persisted across restarts. |
-| **App drawer** | Full list with letter headers and an A–Z jump rail. |
-| **Search** | Fuzzy subsequence matching — `gm` finds *Gmail*, `ch` finds *Chrome* and *Clock*. |
-| **Long press** | Pin to dock, hide, app info, uninstall, and any shortcuts the app declares. |
-| **Ocean motion** | Layered animated background: depth gradient, horizon glow, three drifting caustic pools, and a swell across the horizon. |
-| **Four themes** | Sunrise (light), Tide, Deep, Night tide. Each is a full palette, not a hue rotation. |
+| **App drawer** | Letter headers and an A–Z jump rail, reachable by swiping the clock. |
+| **Fuzzy search** | Subsequence matching — `gm` finds *Gmail*, `ch` finds *Chrome* and *Clock*. |
+| **Long press** | Pin to dock, hide, app info, uninstall, and any shortcuts an app declares. |
+| **Ocean motion** | Layered animated background; can be switched off in Settings. |
+| **Four themes** | Sunrise (light), Tide, Deep, Night tide — each a full palette, not a hue rotation. |
+| **Icon shapes** | Squircle, circle or rounded, applied live without re-rasterising. |
 | **Undo** | Hiding or unpinning is reversible from the notice bar. |
-| **Debug overlay** | Live frame timing, p95 frame time, jank percentage, and heap usage. |
+| **Frame overlay** | Optional live FPS, p95 frame time, jank percentage and heap usage. |
 
-## Screens
+## Install
 
-The home screen renders the ocean full-bleed with the clock floating over it, a
-tide gauge showing how far through the day it is, and the dock as a glass pill.
-
-## Performance notes
-
-Two problems surfaced while running this on a software-rendered emulator, and
-both fixes are load-bearing on real hardware too:
-
-- **Five full-screen gradient fills per frame.** Four were radial, and a radial
-  gradient evaluates a `sqrt` per pixel — around 15M shader invocations per
-  frame at 1080×2400. That was enough to ANR SystemUI. The background is now
-  rendered into a third-resolution offscreen buffer and blitted up, cutting the
-  gradient work ~9×. It is soft everywhere, so the upscale is invisible.
-- **A stale top-left rectangle.** `android.graphics.Canvas` retains its matrix
-  between frames, so an unbalanced `scale(1/3, 1/3)` compounded every frame
-  (1/3, 1/9, 1/27 …) and walked the artwork into the corner. It needs an
-  explicit `save`/`restore`.
-
-## Building
-
-Requires JDK 17+ and an Android SDK with platform 36 or newer.
+Tide is not on the Play Store. Grab the release APK from
+[the build artifacts](https://github.com/loak7993-code/tide/actions/workflows/build.yml),
+or build it yourself:
 
 ```bash
-echo "sdk.dir=/path/to/android-sdk" > local.properties
+git clone https://github.com/loak7993-code/tide.git
+cd tide
+echo "sdk.dir=$ANDROID_HOME" > local.properties
 ./gradlew :app:assembleDebug
-./gradlew :app:installDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Then set it as the home app:
+Then make it the home app:
 
 ```bash
 adb shell cmd package set-home-activity \
   app.tide.launcher.debug/app.tide.launcher.MainActivity
 ```
 
-## Release builds
+> Requires **JDK 17+** and **compileSdk 36**. `minSdk` is 26 — adaptive icons
+> are what let the grid render every app on one mask instead of a mix of legacy
+> squares, and they landed in Android 8.
+
+## How it works
+
+A few decisions that are not obvious from the file list.
+
+**Icons are rasterised once, into bitmaps.** `PackageManager.getActivityIcon`
+returns a `Drawable`, which carries mutable bounds and alpha — sharing one
+instance across grid cells that lay it out at different sizes corrupts it.
+`IconCache` flattens every icon to an immutable `ImageBitmap` and keeps them in
+an LRU, so scrolling never touches the `PackageManager`.
+
+**Adaptive icons are composited unmasked.** `AdaptiveIconDrawable.draw()` applies
+its own OEM mask, which would fight the icon-shape setting. Background and
+foreground layers are flattened full-bleed instead and the shape is applied at
+draw time — so switching shapes is instant rather than a re-rasterise.
+
+**The ocean renders offscreen at a third resolution.** A depth gradient, a glow,
+three caustic pools, a shimmer and a vignette is six large fills per frame, four
+of them radial — and a radial gradient evaluates a `sqrt` per pixel. At
+1080×2400 that is ~15M shader invocations per frame: fine on a phone GPU, and
+enough to ANR a software renderer outright. Rendering the same layers into a
+third-resolution buffer and blitting up with bilinear filtering cuts the
+gradient work by ~9×. On something this smooth the upscale is invisible, so
+downsampling is the correct tool rather than a compromise.
+
+**Gradients are built once, then translated.** Within the low-resolution pass,
+every shader is created once per palette; the animation only moves the canvas.
+The animated values are read inside the draw lambda so they invalidate the draw
+phase and never trigger recomposition.
+
+**Gestures are deliberately conservative.** Swipe-up lives on the clock, not on
+the grid. A vertical drag recogniser on a scrollable list either fights the
+scroll or silently stops working once scrolled — both feel broken. Confining it
+to a zone where it is always available and never ambiguous is the better trade.
+
+**Search scoring is weighted, not boolean.** Consecutive runs, word boundaries,
+prefix matches and exact labels each carry a different weight, so `ca` ranks
+*Calendar* above an incidental subsequence match. Covered by
+[21 unit tests](app/src/test/java/app/tide/launcher/data/FuzzyTest.kt).
+
+## Releasing
 
 `assembleRelease` runs R8 in full mode with resource shrinking. The rules in
-`app/proguard-rules.pro` cover the three things that actually break when
-minified: kotlinx.serialization's generated serializers, DataStore's protobuf
-descriptors, and enums that round-trip through preferences by name.
+[`proguard-rules.pro`](app/proguard-rules.pro) cover the three things that
+actually break when minified: kotlinx.serialization's generated serializers,
+DataStore's protobuf descriptors, and enums that round-trip through preferences
+by name.
 
 To sign a real release, drop a `keystore.properties` in the project root:
 
@@ -85,35 +134,40 @@ keyPassword=...
 Without it, `assembleRelease` falls back to the debug key so the build still
 produces an installable artifact. That file and any `*.jks` are gitignored.
 
-## Notes on the design
+## Project layout
 
-**Icons are rasterised once, into bitmaps.** `PackageManager.getActivityIcon`
-returns a `Drawable`, which carries mutable bounds and alpha — sharing one
-instance across grid cells that lay it out at different sizes corrupts it.
-`IconCache` flattens each icon to an immutable `ImageBitmap` and memoise it in an
-LRU, so scrolling never touches the `PackageManager`.
-
-**Adaptive icons are composited unmasked.** `AdaptiveIconDrawable.draw()` applies
-its own OEM mask, which would fight the icon-shape setting. Background and
-foreground layers are flattened full-bleed instead, and the shape is applied at
-draw time — so switching squircle / circle / rounded is instant rather than a
-re-rasterise.
-
-**The ocean is a handful of fills, not a shader per frame.** Every gradient is
-built once per palette and the animation only drives a canvas `translate()`. The
-animated values are read inside the draw lambda, so they invalidate only the
-draw phase rather than recomposing the tree every frame.
-
-**Gestures are deliberately conservative.** Swipe-up lives on the clock area,
-not the grid: a vertical drag recogniser on a scrollable list either fights the
-scroll or silently stops working once scrolled. Both feel broken, so the gesture
-is confined to a zone where it is always available and never ambiguous.
+```
+app/src/main/java/app/tide/launcher/
+├── core/          LauncherActions, Haptics, AppShortcuts
+├── data/          AppRepository, IconCache, SettingsStore, Fuzzy
+├── debug/         TideLog, DebugOverlay
+└── ui/
+    ├── components/ OceanBackground, AppIconTile, GlassSurface, AppMenuSheet
+    ├── drawer/     DrawerScreen
+    ├── home/       HomeSurface, ClockWidget
+    ├── settings/   SettingsScreen
+    └── theme/      OceanPalette, Motion, Type, Shape
+```
 
 ## Status
 
-Working and installable. Not yet done: widget host, folder support, drag-to-
-reorder in the dock, and the instrumentation tests.
+Working and installable — verified on an API 35 emulator.
+
+Not done yet:
+
+- Widget host
+- Folders
+- Drag-to-reorder in the dock
+- Instrumentation (UI) tests — unit tests cover the scorer and settings
+  invariants, but there is no UI test suite yet
+- Licence (see below)
 
 ## Licence
 
-Not specified yet.
+**None yet.** Add a `LICENSE` file before treating this as reusable code — by
+default it is copyright-all-rights-reserved.
+
+## Credits
+
+Icons belong to their respective apps and are rendered by the platform at
+runtime; none are bundled in this repository.
