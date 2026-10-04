@@ -13,6 +13,8 @@ val keystoreProps = Properties().apply {
 
 android {
     namespace = "app.tide.launcher"
+    // 37 is not a preference: the Compose BOM in use is compiled against it, and
+    // AAR metadata rejects the build against anything lower.
     compileSdk = 37
 
     defaultConfig {
