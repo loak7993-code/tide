@@ -17,6 +17,7 @@
 
 [![build](https://github.com/loak7993-code/tide/actions/workflows/build.yml/badge.svg)](https://github.com/loak7993-code/tide/actions/workflows/build.yml)
 [![release](https://img.shields.io/github/v/release/loak7993-code/tide?label=release&color=57B7C9)](https://github.com/loak7993-code/tide/releases/latest)
+[![license](https://img.shields.io/badge/license-MIT-57B7C9?style=flat)](LICENSE)
 [![kotlin](https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?style=flat&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![compose](https://img.shields.io/badge/Jetpack%20Compose-2026.09-4285F4?style=flat&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![minsdk](https://img.shields.io/badge/minSdk-26-green?style=flat)](https://developer.android.com/about/versions/oreo)
@@ -194,12 +195,10 @@ Not done yet:
 - Grid drag-and-drop (only the dock reorders)
 - Folders cannot nest, and are created one app at a time rather than by
   multi-selecting
-- Licence (see below)
 
 ## Licence
 
-**None yet.** Add a `LICENSE` file before treating this as reusable code — by
-default it is copyright-all-rights-reserved.
+[MIT](LICENSE) © 2026 loak7993-code.
 
 ## Credits
 
