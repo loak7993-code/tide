@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import app.tide.launcher.debug.TideLog
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -197,7 +198,16 @@ class SettingsStore(private val context: Context) {
         // A corrupt or unreadable preferences file must not take the launcher
         // down with it — a home screen that crashes on boot bricks the device.
         .catch { cause ->
-            if (cause is IOException) emit(emptyPreferences()) else throw cause
+            // A corrupt or unreadable preferences file must not take the
+            // launcher down — a home screen that crashes on boot bricks the
+            // device, leaving no way back into the app to fix it.
+            //
+            // This catches everything, not just IOException. DataStore signals a
+            // damaged protobuf file with `CorruptionException`, which is not an
+            // IOException, so the narrower check that used to be here rethrew it
+            // and killed the whole settings flow.
+            TideLog.warn("store", "settings unreadable, starting from defaults", cause)
+            emit(emptyPreferences())
         }
         .map { prefs ->
             TideSettings(

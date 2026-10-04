@@ -10,6 +10,7 @@ import app.tide.launcher.data.Folder
 import app.tide.launcher.data.Fuzzy
 import app.tide.launcher.data.IconShape
 import app.tide.launcher.data.SettingsStore
+import app.tide.launcher.debug.loge
 import app.tide.launcher.data.SortOrder
 import app.tide.launcher.data.TideSettings
 import app.tide.launcher.debug.logi
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -135,8 +137,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         combine(
             surface, query, menuFor, folderFor, folderMenuFor,
         ) { s, q, m, f, fm -> Nav(s, q, m, f, fm) },
-        store.settings,
-        repository.apps,
+        // A launcher's state flow is the one thing that must never fail: if it
+        // throws, the home screen has no state to draw and the user is locked
+        // out of the device with no way back in to fix it. Both upstreams are
+        // caught and degraded rather than propagated.
+        store.settings.catch { cause ->
+            loge("vm", "settings flow failed", cause)
+            emit(TideSettings())
+        },
+        repository.apps.catch { cause ->
+            loge("vm", "app list failed", cause)
+            emit(emptyList())
+        },
         loading,
         notice,
     ) { nav, settings, apps, isLoading, currentNotice ->
