@@ -5,6 +5,17 @@ gradient, caustic light, and glass surfaces floating on top of it.
 
 <p align="center"><em>Kotlin · Jetpack Compose · Material 3 · minSdk 26 · targetSdk 36</em></p>
 
+<p align="center">
+  <img src="docs/screens/home.png" width="30%" alt="Home: clock, tide gauge, app grid and dock over the ocean gradient">
+  <img src="docs/screens/drawer.png" width="30%" alt="App drawer with letter headers and an A–Z jump rail">
+  <img src="docs/screens/long-press.png" width="30%" alt="Long-press sheet over the dimmed home screen">
+</p>
+
+<p align="center">
+  <img src="docs/screens/search.png" width="30%" alt="Fuzzy search matching 'gm' to Gmail">
+  <img src="docs/screens/settings.png" width="30%" alt="Settings: themes, icon shapes, grid density">
+</p>
+
 ## What it does
 
 | | |
@@ -22,6 +33,21 @@ gradient, caustic light, and glass surfaces floating on top of it.
 
 The home screen renders the ocean full-bleed with the clock floating over it, a
 tide gauge showing how far through the day it is, and the dock as a glass pill.
+
+## Performance notes
+
+Two problems surfaced while running this on a software-rendered emulator, and
+both fixes are load-bearing on real hardware too:
+
+- **Five full-screen gradient fills per frame.** Four were radial, and a radial
+  gradient evaluates a `sqrt` per pixel — around 15M shader invocations per
+  frame at 1080×2400. That was enough to ANR SystemUI. The background is now
+  rendered into a third-resolution offscreen buffer and blitted up, cutting the
+  gradient work ~9×. It is soft everywhere, so the upscale is invisible.
+- **A stale top-left rectangle.** `android.graphics.Canvas` retains its matrix
+  between frames, so an unbalanced `scale(1/3, 1/3)` compounded every frame
+  (1/3, 1/9, 1/27 …) and walked the artwork into the corner. It needs an
+  explicit `save`/`restore`.
 
 ## Building
 

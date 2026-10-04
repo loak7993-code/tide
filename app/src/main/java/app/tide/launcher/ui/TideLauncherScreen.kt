@@ -80,12 +80,8 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
 
-    LaunchedEffect(state.allApps.size, state.gridApps.size, state.loading) {
-        logi(
-            "ui",
-            "all=${state.allApps.size} grid=${state.gridApps.size} " +
-                "visible=${state.visibleApps.size} loading=${state.loading}",
-        )
+    LaunchedEffect(state.surface) {
+        logi("ui", "surface=${state.surface} apps=${state.allApps.size}")
     }
 
     // Home shrinks away before the target activity takes over, so the handover

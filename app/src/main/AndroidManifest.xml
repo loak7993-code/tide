@@ -1,15 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- A launcher's entire purpose is to enumerate every launchable activity on
-         the device. QUERY_ALL_PACKAGES is the sanctioned permission for this and
-         is accepted under Play's launcher-app exemption. Without it, package
-         visibility filtering on API 30+ hides the grid. -->
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+         the device, so `QUERY_ALL_PACKAGES` is the sanctioned permission and is
+         accepted under Play's launcher-app exemption. Lint's usual preference for
+         a `<queries>` declaration does not apply: a launcher cannot know the
+         package names of apps installed after it ships.
+
+         The `<queries>` block below still declares the intents Tide resolves
+         directly, so those keep working even if the permission is ever
+         withdrawn. -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DELETE" />
+            <data android:scheme="package" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.STILL_IMAGE_CAMERA" />
+        </intent>
+    </queries>
 
     <application
         android:name=".TideApplication"
@@ -32,8 +54,8 @@
             android:clearTaskOnLaunch="true"
             android:screenOrientation="fullUser"
             android:resizeableActivity="true"
-            android:theme="@style/Theme.Tide"
-            android:windowSoftInputMode="adjustPan"
+            android:theme="@style/Theme.Tide.Starting"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation|uiMode|density|fontScale">
 
             <intent-filter>

@@ -54,7 +54,12 @@ object Fuzzy {
             if (isBoundary) total += BOUNDARY
             if (exactCase) total += EXACT_CASE
 
-            if (found == lastMatchIndex + 1) {
+            // Guarded on having matched something already: `lastMatchIndex`
+            // starts at -1, so without this a first match landing at index 0
+            // satisfies `found == lastMatchIndex + 1` and collects a run bonus
+            // it did not earn — inflating nearly every query, since most labels
+            // start with the first character.
+            if (lastMatchIndex >= 0 && found == lastMatchIndex + 1) {
                 runLength++
                 // Diminishing bonus so a long run keeps rewarding without
                 // letting one word dominate every comparison.

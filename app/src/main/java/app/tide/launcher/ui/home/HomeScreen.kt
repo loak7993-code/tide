@@ -143,7 +143,7 @@ fun HomeSurface(
                     columns = GridCells.Fixed(columns),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Top),
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     items(items = apps, key = { it.key }) { entry ->

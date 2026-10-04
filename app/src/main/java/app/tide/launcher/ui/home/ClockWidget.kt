@@ -34,7 +34,7 @@ import app.tide.launcher.ui.theme.TideTypography
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
+import androidx.compose.ui.platform.LocalConfiguration
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -68,15 +68,23 @@ fun ClockWidget(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // Read through LocalConfiguration rather than Locale.getDefault() so the
+        // clock re-formats when the user changes locale; the direct read is not
+        // an observable state and would leave the old format on screen.
+        val locale = LocalConfiguration.current.locales[0]
+        val clockFormat = remember(locale) { DateTimeFormatter.ofPattern("HH:mm", locale) }
+        val dateFormat = remember(locale) {
+            DateTimeFormatter.ofPattern("EEEE d MMMM", locale)
+        }
+
         Text(
-            text = now.format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())),
+            text = now.format(clockFormat),
             style = TideTypography.displayLarge,
             color = palette.onSurface,
         )
         Spacer(Modifier.height(2.dp))
         Text(
-            text = greeting(now.hour) + " · " +
-                now.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())),
+            text = greeting(now.hour) + " · " + now.format(dateFormat),
             style = TideTypography.bodyLarge,
             color = palette.onSurfaceMuted,
             textAlign = TextAlign.Center,

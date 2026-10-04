@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -116,7 +117,7 @@ fun DrawerScreen(
         }
     }
 
-    Box(modifier.fillMaxSize()) {
+    Box(modifier.fillMaxSize().imePadding()) {
         Column(Modifier.fillMaxSize()) {
             // ── search bar ───────────────────────────────────────────────────
             SearchField(
@@ -133,7 +134,11 @@ fun DrawerScreen(
                 focusRequester = focusRequester,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(contentPadding)
+                    // Only the top inset applies here. Pushing the full
+                    // `contentPadding` onto the field would add the navigation
+                    // bar height as padding underneath it, pushing the whole
+                    // list down by an extra bar's worth.
+                    .padding(top = contentPadding.calculateTopPadding())
                     .padding(horizontal = 16.dp, vertical = 10.dp),
             )
 
@@ -159,13 +164,23 @@ fun DrawerScreen(
                             top = 4.dp,
                         ),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        // Alignment pinned explicitly: `spacedBy` alone centres the
+                        // content vertically, so a short result list floats in the
+                        // middle of an empty screen instead of sitting under the
+                        // search field.
+                        verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.Top),
                         modifier = Modifier.fillMaxSize().testTag(TEST_TAG_GRID),
                     ) {
                         items.forEach { item ->
                             when (item) {
                                 is DrawerItem.Header -> {
-                                    item(key = "header_${item.letter}") {
+                                    // Full line span: a header sitting in one
+                                    // grid cell scatters down the page instead of
+                                    // running across the top of its section.
+                                    item(
+                                        key = "header_${item.letter}",
+                                        span = { GridItemSpan(maxLineSpan) },
+                                    ) {
                                         LetterHeader(item.letter)
                                     }
                                 }

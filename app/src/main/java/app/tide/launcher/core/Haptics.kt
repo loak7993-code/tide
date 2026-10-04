@@ -64,7 +64,18 @@ object Haptics {
         )
         val v = context.vibrator() ?: return
         runCatching {
-            v.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                v.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+            } else {
+                // createPredefined landed in API 29; below that, a short one-shot
+                // is the closest equivalent the platform offers.
+                v.vibrate(
+                    VibrationEffect.createOneShot(
+                        24L,
+                        VibrationEffect.DEFAULT_AMPLITUDE,
+                    ),
+                )
+            }
         }
     }
 

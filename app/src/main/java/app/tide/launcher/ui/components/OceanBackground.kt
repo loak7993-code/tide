@@ -1,5 +1,12 @@
 package app.tide.launcher.ui.components
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.RectF
+import android.graphics.Shader
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -12,37 +19,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.withTransform
-import app.tide.launcher.ui.theme.OceanPalette
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import app.tide.launcher.ui.theme.LocalOceanPalette
+import app.tide.launcher.ui.theme.OceanPalette
+
+/**
+ * The background is rendered at a third of the display resolution and blitted
+ * up. It is soft everywhere — no high-frequency detail — so the upscale is
+ * invisible while the expensive gradient work drops by ~9×.
+ */
+private const val RENDER_SCALE = 3f
 
 /**
  * The animated water behind everything.
  *
- * ### Why it stays smooth
+ * ### Why this is offscreen-rendered
  *
- * The obvious implementation rebuilds a `Brush` from the current animated values
- * every frame, which reallocates and re-uploads a shader sixty times a second.
- * Here every gradient is constructed **once** per palette; the animation only
- * drives `withTransform { translate() }`. Translating an already-built shader is
- * a matrix change on the GPU, so a frame costs a handful of fills no matter how
- * many layers are stacked.
+ * A depth gradient, a horizon glow, three caustic pools, a shimmer band and a
+ * vignette is six large fills per frame, four of them radial — and a radial
+ * gradient evaluates a `sqrt` per pixel. At 1080×2400 that is roughly 15M
+ * shader invocations per frame: fine on a phone GPU, and enough to ANR a
+ * software renderer outright.
  *
- * The animated values are read *inside* the draw lambda on purpose. A snapshot
- * read during composition would recompose the subtree every frame; the same read
- * inside `Canvas` invalidates only the draw phase.
+ * Rendering the same layers into a third-resolution buffer and blitting up with
+ * bilinear filtering cuts the gradient work by ~9×, and the upscale itself is a
+ * straight copy with no `sqrt`. On something this smooth, downsampling is the
+ * correct tool rather than a compromise.
  *
- * ### Layers
- *  1. Depth gradient — the water column, dark at the top, bright at the horizon.
- *  2. Horizon glow — the sun or moon sitting just under the surface.
- *  3. Caustics — light pools drifting at different speeds, counter-scrolling so
- *     the pattern never visibly repeats.
- *  4. Surface shimmer — slow swell across the horizon, so it is never a hard edge.
+ * ### What still runs per frame
+ *
+ * Shaders are built **once** per palette; only canvas `translate()` moves. The
+ * animated values are read inside the draw lambda, so they invalidate the draw
+ * phase and never trigger recomposition.
  */
 @Composable
 fun OceanBackground(
@@ -74,141 +85,206 @@ fun OceanBackground(
         label = "glowPhase",
     )
 
-    // Built once per palette — these are the expensive objects.
-    val brushes = remember(palette) { OceanBrushes(palette) }
+    val layers = remember(palette) { OceanLayers(palette) }
 
     Canvas(modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
-        // Read in draw scope: invalidates draw only, never recomposition.
+        if (w <= 0f || h <= 0f) return@Canvas
+
+        // Read in draw scope: invalidates draw only.
         val p = if (motion) phase else 0f
         val g = if (motion) glowPhase else 0.5f
 
+        val buffer = layers.bufferFor(w, h)
+        val canvas = buffer.canvas
+        // save/restore around the downscale: an android.graphics.Canvas keeps
+        // its matrix between frames, so an unbalanced scale would compound
+        // (1/3, 1/9, 1/27 …) and walk the artwork into the top-left corner.
+        canvas.save()
+        canvas.scale(1f / RENDER_SCALE, 1f / RENDER_SCALE)
+
         // ── 1. depth ────────────────────────────────────────────────────────
-        drawRect(brushes.depth)
+        // Covers the whole buffer, so nothing needs clearing between frames.
+        canvas.drawRect(0f, 0f, w, h, layers.depthPaint)
 
         // ── 2. horizon glow ─────────────────────────────────────────────────
-        // Sits just below the horizon, breathing gently in radius and strength.
-        centeredGlow(
-            brush = brushes.glow,
-            cx = w * 0.72f,
-            cy = h * 0.60f,
-            diameter = size.minDimension * 1.60f * (1f + g * 0.06f),
+        layers.pool(
+            canvas, layers.glowPaint,
+            cx = w * 0.72f, cy = h * 0.60f,
+            radius = minOf(w, h) * 0.80f * (1f + g * 0.06f),
             alpha = 0.34f + g * 0.14f,
         )
 
         // ── 3. caustics ─────────────────────────────────────────────────────
-        // Three pools on different periods and directions. The irrational-ish
+        // Three pools on different periods and directions; the uneven
         // multipliers stop them from drifting back into alignment.
-        centeredGlow(
-            brush = brushes.causticA,
-            cx = w * (0.24f + p * 0.70f),
-            cy = h * (0.80f - p * 0.10f),
-            diameter = w * 1.30f,
-            alpha = 0.36f,
+        layers.pool(
+            canvas, layers.causticAPaint,
+            cx = w * (0.24f + p * 0.70f), cy = h * (0.80f - p * 0.10f),
+            radius = w * 0.65f, alpha = 0.36f,
         )
-        centeredGlow(
-            brush = brushes.causticB,
-            cx = w * (0.92f - p * 0.85f),
-            cy = h * (0.52f + p * 0.22f),
-            diameter = w * 1.55f,
-            alpha = 0.32f,
+        layers.pool(
+            canvas, layers.causticBPaint,
+            cx = w * (0.92f - p * 0.85f), cy = h * (0.52f + p * 0.22f),
+            radius = w * 0.78f, alpha = 0.32f,
         )
-        centeredGlow(
-            brush = brushes.causticC,
-            cx = w * (0.10f + p * 1.25f),
-            cy = h * (0.66f - p * 0.30f),
-            diameter = w * 0.95f,
-            alpha = 0.28f,
+        layers.pool(
+            canvas, layers.causticCPaint,
+            cx = w * (0.10f + p * 1.25f), cy = h * (0.66f - p * 0.30f),
+            radius = w * 0.48f, alpha = 0.28f,
         )
 
         // ── 4. shimmer across the horizon ───────────────────────────────────
-        drawRect(
-            brush = Brush.verticalGradient(
-                0f to Color.Transparent,
-                0.5f to palette.glow.copy(alpha = 0.10f + g * 0.05f),
-                1f to Color.Transparent,
-                startY = h * 0.58f,
-                endY = h * 0.88f,
-            ),
-            topLeft = Offset.Zero,
-            size = Size(w, h),
-        )
+        layers.shimmerPaint.alpha = ((0.10f + g * 0.05f) * 255f).toInt()
+        canvas.drawRect(0f, h * 0.58f, w, h * 0.88f, layers.shimmerPaint)
 
         // ── vignette ────────────────────────────────────────────────────────
-        // Keeps the clock and the dock legible over whatever caustic happens to
-        // be drifting underneath them.
-        drawRect(brushes.vignette)
+        canvas.drawRect(0f, 0f, w, h, layers.vignettePaint)
+
+        canvas.restore()
+
+        // ── upscale ─────────────────────────────────────────────────────────
+        drawIntoCanvas { target ->
+            target.nativeCanvas.drawBitmap(buffer.bitmap, null, layers.dst, layers.blitPaint)
+        }
     }
 }
 
-/** All shaders for one palette, built together so there is one memo key. */
-private class OceanBrushes(palette: OceanPalette) {
-    val depth: Brush = Brush.verticalGradient(
-        0f to palette.gradientStops[0],
-        0.20f to palette.gradientStops[1],
-        0.44f to palette.gradientStops[2],
-        0.66f to palette.gradientStops[3],
-        0.85f to palette.gradientStops[4],
-        1f to palette.gradientStops[5],
-    )
-
-    val glow: Brush = radial(palette.glow, softness = 0.80f)
-    val causticA: Brush = radial(palette.currentA, softness = 0.85f)
-    val causticB: Brush = radial(palette.currentB, softness = 0.90f)
-    val causticC: Brush = radial(
-        palette.glow.copy(alpha = palette.glow.alpha * 0.26f),
-        softness = 0.85f,
-    )
-
-    val vignette: Brush = Brush.verticalGradient(
-        0f to palette.gradientStops.first().copy(alpha = 0.44f),
-        0.26f to Color.Transparent,
-        0.72f to Color.Transparent,
-        1f to Color.Black.copy(alpha = 0.28f),
-    )
+/** Offscreen target for the low-resolution pass, reused across frames. */
+private class OceanBuffer(val bitmap: Bitmap) {
+    val canvas = Canvas(bitmap)
 }
 
 /**
- * Radial falloff anchored at the origin so it can be positioned by translating
- * the canvas rather than by rebuilding the shader.
+ * Shaders, paints and the reusable offscreen buffer for one palette.
  *
- * [softness] controls how fast alpha falls off: 1.0 is a tight core fading
- * quickly, lower values carry the colour further out.
+ * Everything is expressed in full-resolution units; the canvas is scaled down
+ * once per frame, so the gradient maths matches the display size.
  */
-private fun radial(color: Color, softness: Float): Brush = Brush.radialGradient(
-    colors = listOf(
-        color,
-        color.copy(alpha = color.alpha * (1f - softness * 0.5f)),
-        color.copy(alpha = color.alpha * (1f - softness * 0.8f)),
-        Color.Transparent,
-    ),
-    center = Offset.Zero,
-    radius = 1f,
-)
+private class OceanLayers(private val palette: OceanPalette) {
 
-/**
- * Draws a [Brush] built by [radial] so its centre lands on ([cx], [cy]).
- *
- * Compose anchors a shader to canvas coordinates, *not* to the rect passed to
- * `drawRect`, so moving the gradient means moving the canvas. The rect is drawn
- * at the origin and the transform does the placing.
- */
-private fun DrawScope.centeredGlow(
-    brush: Brush,
-    cx: Float,
-    cy: Float,
-    diameter: Float,
-    alpha: Float,
-) {
-    if (alpha <= 0.002f || diameter <= 0f) return
-    val radius = diameter / 2f
-    withTransform({ translate(cx, cy) }) {
-        drawRect(
-            brush = brush,
-            topLeft = Offset(-radius, -radius),
-            size = Size(diameter, diameter),
-            alpha = alpha,
+    val depthPaint = flatPaint()
+    val glowPaint = flatPaint()
+    val causticAPaint = flatPaint()
+    val causticBPaint = flatPaint()
+    val causticCPaint = flatPaint()
+    val shimmerPaint = flatPaint()
+    val vignettePaint = flatPaint()
+
+    val blitPaint = Paint().apply {
+        isFilterBitmap = true
+        isDither = true
+    }
+
+    val dst = RectF()
+
+    private var buffer: OceanBuffer? = null
+
+    fun bufferFor(width: Float, height: Float): OceanBuffer {
+        val bw = (width / RENDER_SCALE).toInt().coerceAtLeast(1)
+        val bh = (height / RENDER_SCALE).toInt().coerceAtLeast(1)
+
+        val existing = buffer
+        if (existing != null && existing.bitmap.width == bw && existing.bitmap.height == bh) {
+            return existing
+        }
+
+        val created = OceanBuffer(Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888))
+        buffer = created
+        dst.set(0f, 0f, width, height)
+        buildShaders(width, height)
+        return created
+    }
+
+    /**
+     * Draws a radial pool centred on ([cx], [cy]).
+     *
+     * A [RadialGradient] is anchored to canvas coordinates, not to the rect it
+     * is drawn into, so the pool is placed by translating the canvas rather than
+     * by rebuilding the shader — which is what keeps this off the per-frame
+     * shader-compile path.
+     */
+    fun pool(
+        canvas: Canvas,
+        paint: Paint,
+        cx: Float,
+        cy: Float,
+        radius: Float,
+        alpha: Float,
+    ) {
+        if (alpha <= 0.002f || radius <= 0f) return
+        canvas.save()
+        canvas.translate(cx, cy)
+        paint.alpha = (alpha.coerceIn(0f, 1f) * 255f).toInt()
+        canvas.drawCircle(0f, 0f, radius, paint)
+        canvas.restore()
+    }
+
+    private fun buildShaders(width: Float, height: Float) {
+        val stops = palette.gradientStops
+
+        depthPaint.shader = LinearGradient(
+            0f, 0f, 0f, height,
+            intArrayOf(
+                stops[0].toArgb(), stops[1].toArgb(), stops[2].toArgb(),
+                stops[3].toArgb(), stops[4].toArgb(), stops[5].toArgb(),
+            ),
+            floatArrayOf(0f, 0.20f, 0.44f, 0.66f, 0.85f, 1f),
+            Shader.TileMode.CLAMP,
+        )
+
+        glowPaint.shader = radial(palette.glow, 0.80f)
+        causticAPaint.shader = radial(palette.currentA, 0.85f)
+        causticBPaint.shader = radial(palette.currentB, 0.90f)
+        causticCPaint.shader = radial(
+            palette.glow.copy(alpha = palette.glow.alpha * 0.26f), 0.85f,
+        )
+
+        shimmerPaint.shader = LinearGradient(
+            0f, height * 0.58f, 0f, height * 0.88f,
+            intArrayOf(
+                Color.Transparent.toArgb(),
+                palette.glow.toArgb(),
+                Color.Transparent.toArgb(),
+            ),
+            floatArrayOf(0f, 0.5f, 1f),
+            Shader.TileMode.CLAMP,
+        )
+
+        vignettePaint.shader = LinearGradient(
+            0f, 0f, 0f, height,
+            intArrayOf(
+                stops.first().copy(alpha = 0.44f).toArgb(),
+                Color.Transparent.toArgb(),
+                Color.Transparent.toArgb(),
+                Color.Black.copy(alpha = 0.28f).toArgb(),
+            ),
+            floatArrayOf(0f, 0.26f, 0.72f, 1f),
+            Shader.TileMode.CLAMP,
         )
     }
+
+    private fun flatPaint() = Paint().apply {
+        isAntiAlias = false
+        isDither = true
+    }
 }
+
+/**
+ * Radial falloff anchored at the origin so it can be positioned by translation.
+ *
+ * [softness] controls how fast alpha falls off: higher values carry the colour
+ * further before it fades to transparent.
+ */
+private fun radial(color: Color, softness: Float): Shader = RadialGradient(
+    0f, 0f, 1f,
+    intArrayOf(
+        color.toArgb(),
+        color.copy(alpha = color.alpha * (1f - softness * 0.5f)).toArgb(),
+        color.copy(alpha = color.alpha * (1f - softness * 0.8f)).toArgb(),
+        Color.Transparent.toArgb(),
+    ),
+    floatArrayOf(0f, 0.38f, 0.72f, 1f),
+    Shader.TileMode.CLAMP,
+)
