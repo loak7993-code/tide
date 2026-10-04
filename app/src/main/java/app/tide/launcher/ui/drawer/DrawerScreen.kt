@@ -351,10 +351,12 @@ private fun AlphabetRail(
                 targetValue = if (pressed) palette.accent else palette.onSurfaceMuted,
                 label = "railColor",
             )
-            Text(
-                text = letter.toString(),
-                style = TideTypography.labelSmall,
-                color = color,
+            // The letter sits in a full-width Box rather than carrying
+            // `fillMaxWidth` itself: that keeps the touch target comfortable
+            // while letting the Column centre the glyph. With `fillMaxWidth` on
+            // the Text, the glyph aligned to the start of the rail and the
+            // Column's `CenterHorizontally` had no effect against it.
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(14.dp)
@@ -363,9 +365,15 @@ private fun AlphabetRail(
                         interactionSource = interactionSource,
                         indication = null,
                         onClick = { onPick(index) },
-                    )
-                    .padding(vertical = 1.dp),
-            )
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = letter.toString(),
+                    style = TideTypography.labelSmall,
+                    color = color,
+                )
+            }
         }
     }
 }

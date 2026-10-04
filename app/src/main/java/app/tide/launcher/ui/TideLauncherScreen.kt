@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -141,7 +141,12 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
         ) {
             OceanBackground(motion = state.settings.oceanMotion)
 
-            val surfacePadding = WindowInsets.safeDrawing.asPaddingValues()
+            // `systemBars`, not `safeDrawing`: safeDrawing unions in the IME, and the
+            // drawer consumes that separately with `imePadding()`. Passing
+            // safeDrawing down would count the keyboard twice — which showed up
+            // as the A-Z rail collapsing to a handful of letters when the search
+            // field was focused.
+            val surfacePadding = WindowInsets.systemBars.asPaddingValues()
 
             AnimatedContent(
                 targetState = state.surface,
