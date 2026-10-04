@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.tide.launcher.data.AppEntry
 import app.tide.launcher.data.AppRepository
+import app.tide.launcher.data.ClockFormat
 import app.tide.launcher.data.Folder
 import app.tide.launcher.data.Fuzzy
 import app.tide.launcher.data.IconShape
@@ -348,6 +349,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setDebugOverlay(on: Boolean) = viewModelScope.launch { store.setDebugOverlay(on) }
 
     fun setWidgetIds(ids: List<Int>) = viewModelScope.launch { store.setWidgetIds(ids) }
+
+    // ── customisation ────────────────────────────────────────────────────────
+    fun setShowClock(show: Boolean) = viewModelScope.launch { store.setShowClock(show) }
+    fun setShowDate(show: Boolean) = viewModelScope.launch { store.setShowDate(show) }
+    fun setClockFormat(format: ClockFormat) = viewModelScope.launch { store.setClockFormat(format) }
+    fun setIconScale(scale: Float) = viewModelScope.launch { store.setIconScale(scale) }
+    fun setLabelScale(scale: Float) = viewModelScope.launch { store.setLabelScale(scale) }
+    fun setMotionIntensity(value: Float) = viewModelScope.launch { store.setMotionIntensity(value) }
+    fun setPanelOpacity(value: Float) = viewModelScope.launch { store.setPanelOpacity(value) }
+    fun completeOnboarding() = viewModelScope.launch { store.setOnboarded(true) }
 
     /**
      * Widget id awaiting the provider's configuration activity. The bind only

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -28,6 +29,19 @@ enum class IconShape(val displayName: String) {
     companion object {
         fun fromName(name: String?): IconShape =
             entries.firstOrNull { it.name == name } ?: Squircle
+    }
+}
+
+/** 12- or 24-hour clock, or follow the device. */
+enum class ClockFormat(val displayName: String) {
+    Auto("Follow device"),
+    H12("12-hour"),
+    H24("24-hour"),
+    ;
+
+    companion object {
+        fun fromName(name: String?): ClockFormat =
+            entries.firstOrNull { it.name == name } ?: Auto
     }
 }
 
@@ -62,6 +76,22 @@ data class TideSettings(
     val hiddenApps: Set<String> = emptySet(),
     val folders: List<Folder> = emptyList(),
     val widgetIds: List<Int> = emptyList(),
+
+    // ── customisation ───────────────────────────────────────────────────────
+    val showClock: Boolean = true,
+    val showDate: Boolean = true,
+    val clockFormat: ClockFormat = ClockFormat.Auto,
+    /** Multiplier on the grid icon size, 0.8 to 1.2. */
+    val iconScale: Float = 1f,
+    /** Multiplier on the app label size, 0.85 to 1.2. */
+    val labelScale: Float = 1f,
+    /** 0 stops the ocean animation entirely; 1 is full drift. */
+    val motionIntensity: Float = 1f,
+    /** Opacity of the frosted panels, 0.35 to 1. */
+    val panelOpacity: Float = 1f,
+
+    /** False until the first-run flow has been completed. */
+    val onboarded: Boolean = false,
 ) {
     companion object {
         /** Column count is clamped so labels never wrap into each other on a
@@ -69,6 +99,14 @@ data class TideSettings(
         val ColumnRange = 3..6
 
         fun clampColumns(value: Int): Int = value.coerceIn(ColumnRange)
+
+        fun clampScale(value: Float): Float = value.coerceIn(0.8f, 1.2f)
+
+        fun clampLabelScale(value: Float): Float = value.coerceIn(0.85f, 1.2f)
+
+        fun clampIntensity(value: Float): Float = value.coerceIn(0f, 1f)
+
+        fun clampPanelOpacity(value: Float): Float = value.coerceIn(0.35f, 1f)
     }
 }
 
@@ -106,6 +144,15 @@ class SettingsStore(private val context: Context) {
         const val LIST_SEP = "\u001E"
         val folders = stringPreferencesKey("folders_json")
         val widgetIds = stringPreferencesKey("widget_ids")
+
+        val showClock = booleanPreferencesKey("show_clock")
+        val showDate = booleanPreferencesKey("show_date")
+        val clockFormat = stringPreferencesKey("clock_format")
+        val iconScale = floatPreferencesKey("icon_scale")
+        val labelScale = floatPreferencesKey("label_scale")
+        val motionIntensity = floatPreferencesKey("motion_intensity")
+        val panelOpacity = floatPreferencesKey("panel_opacity")
+        val onboarded = booleanPreferencesKey("onboarded")
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -134,6 +181,14 @@ class SettingsStore(private val context: Context) {
                         ?.let { json.decodeFromString<List<Folder>>(it) }
                 }.getOrNull().orEmpty(),
                 widgetIds = prefs[Keys.widgetIds].decodeIntList(),
+                showClock = prefs[Keys.showClock] ?: true,
+                showDate = prefs[Keys.showDate] ?: true,
+                clockFormat = ClockFormat.fromName(prefs[Keys.clockFormat]),
+                iconScale = TideSettings.clampScale(prefs[Keys.iconScale] ?: 1f),
+                labelScale = TideSettings.clampLabelScale(prefs[Keys.labelScale] ?: 1f),
+                motionIntensity = TideSettings.clampIntensity(prefs[Keys.motionIntensity] ?: 1f),
+                panelOpacity = TideSettings.clampPanelOpacity(prefs[Keys.panelOpacity] ?: 1f),
+                onboarded = prefs[Keys.onboarded] ?: false,
             )
         }
 
@@ -191,6 +246,26 @@ class SettingsStore(private val context: Context) {
     )
 
     suspend fun setWidgetIds(ids: List<Int>) = put(Keys.widgetIds, ids.joinToString(Keys.LIST_SEP))
+
+    suspend fun setShowClock(show: Boolean) = put(Keys.showClock, show)
+
+    suspend fun setShowDate(show: Boolean) = put(Keys.showDate, show)
+
+    suspend fun setClockFormat(format: ClockFormat) = put(Keys.clockFormat, format.name)
+
+    suspend fun setIconScale(scale: Float) =
+        put(Keys.iconScale, TideSettings.clampScale(scale))
+
+    suspend fun setLabelScale(scale: Float) =
+        put(Keys.labelScale, TideSettings.clampLabelScale(scale))
+
+    suspend fun setMotionIntensity(value: Float) =
+        put(Keys.motionIntensity, TideSettings.clampIntensity(value))
+
+    suspend fun setPanelOpacity(value: Float) =
+        put(Keys.panelOpacity, TideSettings.clampPanelOpacity(value))
+
+    suspend fun setOnboarded(done: Boolean) = put(Keys.onboarded, done)
 
     private suspend fun <T> put(key: Preferences.Key<T>, value: T) = edit { prefs ->
         prefs[key] = value

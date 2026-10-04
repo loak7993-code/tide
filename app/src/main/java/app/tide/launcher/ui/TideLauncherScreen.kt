@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -32,16 +33,20 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
@@ -56,16 +61,27 @@ import app.tide.launcher.core.Haptics
 import app.tide.launcher.core.LauncherActions
 import app.tide.launcher.data.AppEntry
 import app.tide.launcher.debug.DebugOverlay
+import app.tide.launcher.data.IconCache
 import app.tide.launcher.debug.logi
 import app.tide.launcher.ui.components.GlassSurface
 import app.tide.launcher.ui.components.HomeMenuSheet
+import app.tide.launcher.ui.onboarding.OnboardingFlow
+import app.tide.launcher.ui.components.LaunchEasing
+import app.tide.launcher.ui.components.LaunchTransition
 import app.tide.launcher.ui.components.FolderPickerSheet
 import app.tide.launcher.ui.components.FolderSheet
 import app.tide.launcher.ui.components.OceanBackground
 import app.tide.launcher.ui.drawer.DrawerScreen
 import app.tide.launcher.ui.home.HomeSurface
 import app.tide.launcher.ui.settings.SettingsScreen
+import app.tide.launcher.ui.theme.LocalClockFormat
+import app.tide.launcher.ui.theme.LocalIconScale
+import app.tide.launcher.ui.theme.LocalLabelScale
+import app.tide.launcher.ui.theme.LocalMotionIntensity
 import app.tide.launcher.ui.theme.LocalOceanPalette
+import app.tide.launcher.ui.theme.LocalPanelOpacity
+import app.tide.launcher.ui.theme.LocalShowClock
+import app.tide.launcher.ui.theme.LocalShowDate
 import app.tide.launcher.ui.theme.Motion
 import app.tide.launcher.ui.theme.Radius
 import app.tide.launcher.ui.theme.TideTheme
@@ -93,37 +109,45 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
         logi("ui", "surface=${state.surface} apps=${state.allApps.size}")
     }
 
-    // Home shrinks away before the target activity takes over, so the handover
-    // reads as leaving the surface rather than as the launcher blinking out.
-    var launching by remember { mutableStateOf(false) }
-
     val widgetHost = rememberWidgetHost()
     var showWidgetPicker by remember { mutableStateOf(false) }
     // The app whose "Add to folder" was tapped; the picker acts on it.
     var folderTarget by remember { mutableStateOf<AppEntry?>(null) }
     var showHomeMenu by remember { mutableStateOf(false) }
-    val launchScale = androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (launching) 1.14f else 1f,
-        animationSpec = Motion.Emphasis,
-        label = "launchScale",
-    )
-    val launchAlpha = androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (launching) 0f else 1f,
-        animationSpec = tween(durationMillis = 190),
-        label = "launchAlpha",
-    )
+
+    // The launch handover. Tiles report their bounds as they lay out, so the
+    // transition can begin exactly where the tapped icon was drawn rather than
+    // crossfading the whole screen.
+    val iconBounds = remember { mutableStateMapOf<String, Rect>() }
+    val launchProgress = remember { Animatable(0f) }
+    var launchEntry by remember { mutableStateOf<AppEntry?>(null) }
+    var launchOrigin by remember { mutableStateOf<Rect?>(null) }
 
     fun launch(entry: AppEntry) {
-        if (launching) return
-        launching = true
+        if (launchEntry != null) return
         Haptics.confirm(context, haptics)
+
+        val origin = iconBounds[entry.key]
         scope.launch {
-            delay(170)
+            launchOrigin = origin
+            launchEntry = entry
+            launchProgress.snapTo(0f)
+            // A launch from the drawer or a folder has no measured rect, so it
+            // just crossfades — animating from nowhere would look worse.
+            launchProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = if (origin != null) 300 else 200,
+                    easing = LaunchEasing,
+                ),
+            )
             LauncherActions.launch(context, entry)
-            // Cleared after the activity has had time to take focus; a launcher
-            // that stayed invisible would show a blank wall on return.
-            delay(320)
-            launching = false
+            // Cleared once the target has had time to take focus; a launcher
+            // left mid-transition shows a frozen scrim on return.
+            delay(90)
+            launchEntry = null
+            launchOrigin = null
+            launchProgress.snapTo(0f)
         }
     }
 
@@ -133,6 +157,15 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
     }
 
     TideTheme(state.settings.theme) {
+        CompositionLocalProvider(
+            LocalPanelOpacity provides state.settings.panelOpacity,
+            LocalLabelScale provides state.settings.labelScale,
+            LocalIconScale provides state.settings.iconScale,
+            LocalMotionIntensity provides state.settings.motionIntensity,
+            LocalShowClock provides state.settings.showClock,
+            LocalShowDate provides state.settings.showDate,
+            LocalClockFormat provides state.settings.clockFormat,
+        ) {
         // The water behind the status bar is bright in the light theme and deep
         // in the dark ones, so the system bar icon colour has to follow the
         // palette rather than the device's dark-mode setting.
@@ -148,13 +181,8 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
             }
         }
 
-        Box(
-            Modifier
-                .fillMaxSize()
-                .scale(launchScale.value)
-                .alpha(launchAlpha.value),
-        ) {
-            OceanBackground(motion = state.settings.oceanMotion)
+        Box(Modifier.fillMaxSize()) {
+            OceanBackground(enabled = state.settings.oceanMotion)
 
             // `systemBars`, not `safeDrawing`: safeDrawing unions in the IME, and the
             // drawer consumes that separately with `imePadding()`. Passing
@@ -197,6 +225,7 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
                         onOpenSettings = { viewModel.setSurface(Surface.Settings) },
                         onReorderDock = viewModel::moveDockEntry,
                         onLongPressEmpty = { showHomeMenu = true },
+                        onIconBounds = { key, rect -> iconBounds[key] = rect },
                         widgetSlot = {
                             WidgetArea(
                                 widgetIds = state.settings.widgetIds,
@@ -236,6 +265,13 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
                         onIconShapeChange = viewModel::setIconShape,
                         onColumnsChange = viewModel::setGridColumns,
                         onShowLabelsChange = viewModel::setShowLabels,
+                        onShowClockChange = viewModel::setShowClock,
+                        onShowDateChange = viewModel::setShowDate,
+                        onClockFormatChange = viewModel::setClockFormat,
+                        onIconScaleChange = viewModel::setIconScale,
+                        onLabelScaleChange = viewModel::setLabelScale,
+                        onMotionIntensityChange = viewModel::setMotionIntensity,
+                        onPanelOpacityChange = viewModel::setPanelOpacity,
                         onOceanMotionChange = viewModel::setOceanMotion,
                         onBlurChange = viewModel::setBlurPanels,
                         onDoubleTapChange = viewModel::setDoubleTapToSearch,
@@ -264,9 +300,40 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
                 )
             }
 
+            // ── launch transition ─────────────────────────────────────────────
+            launchEntry?.let { entry ->
+                val origin = launchOrigin
+                if (origin != null) {
+                    val icon = remember(entry.key) { IconCache.peek(entry.component) }
+                    val bitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
+                        initialValue = icon,
+                        key1 = entry.component,
+                    ) {
+                        if (value == null) value = IconCache.load(context, entry.component)
+                    }
+                    LaunchTransition(
+                        icon = bitmap,
+                        from = origin,
+                        progress = launchProgress.value,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
+            }
+
             // ── debug overlay ────────────────────────────────────────────────
             if (state.settings.debugOverlay) {
                 DebugOverlay(modifier = Modifier.align(Alignment.TopEnd))
+            }
+
+            // ── first-run onboarding ─────────────────────────────────────────
+            // Above everything and above the sheets, because the first thing a
+            // new user does is tap through: nothing else should be reachable
+            // until they have either finished or skipped.
+            if (!state.settings.onboarded) {
+                OnboardingFlow(
+                    onThemeChange = viewModel::setTheme,
+                    onDone = viewModel::completeOnboarding,
+                )
             }
         }
 
@@ -360,6 +427,7 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
                     }
                 },
             )
+        }
         }
     }
 }

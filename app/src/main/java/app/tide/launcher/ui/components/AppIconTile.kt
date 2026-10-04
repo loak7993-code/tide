@@ -25,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -41,6 +43,7 @@ import app.tide.launcher.data.AppEntry
 import app.tide.launcher.data.IconCache
 import app.tide.launcher.data.IconShape
 import app.tide.launcher.ui.theme.AppLabelStyle
+import app.tide.launcher.ui.theme.LocalLabelScale
 import app.tide.launcher.ui.theme.LocalOceanPalette
 import app.tide.launcher.ui.theme.Motion
 
@@ -68,11 +71,14 @@ fun AppIconTile(
     showLabel: Boolean,
     iconSize: Dp = 56.dp,
     modifier: Modifier = Modifier,
+    /** Reports this icon's bounds in the root, for the launch animation. */
+    onBounds: (androidx.compose.ui.geometry.Rect) -> Unit = {},
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val palette = LocalOceanPalette.current
+    val labelScale = LocalLabelScale.current
 
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -87,6 +93,9 @@ fun AppIconTile(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(percent = 22))
+            .onGloballyPositioned { coords ->
+                onBounds(coords.boundsInRoot())
+            }
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -108,7 +117,7 @@ fun AppIconTile(
             Spacer(Modifier.height(6.dp))
             Text(
                 text = entry.label,
-                style = AppLabelStyle,
+                style = AppLabelStyle.copy(fontSize = AppLabelStyle.fontSize * labelScale),
                 color = palette.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

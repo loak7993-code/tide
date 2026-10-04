@@ -32,6 +32,37 @@
     <string name="setting_widgets_none">No widgets added</string>
     <string name="setting_widgets_count">%1$d on the home screen</string>
 
+    <string name="onboarding_welcome_title">Tide</string>
+    <string name="onboarding_welcome_body">Your home screen, built around the sea. Everything moves, and nothing is in a hurry.</string>
+    <string name="onboarding_gestures_title">Three gestures worth knowing</string>
+    <string name="onboarding_gesture_longpress_title">Press and hold</string>
+    <string name="onboarding_gesture_longpress_body">Quick actions, folders and app info</string>
+    <string name="onboarding_gesture_drag_title">Hold, then drag</string>
+    <string name="onboarding_gesture_drag_body">Reorder the dock and move icons around</string>
+    <string name="onboarding_gesture_drawer_title">Swipe up</string>
+    <string name="onboarding_gesture_drawer_body">All your apps, with search and an A–Z rail</string>
+    <string name="onboarding_theme_title">Pick your water</string>
+    <string name="onboarding_theme_body">You can change this any time in Settings.</string>
+    <string name="onboarding_ready_title">You\'re all set</string>
+    <string name="onboarding_ready_body">Press HOME at any time to come back here.</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_start">Start using Tide</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="section_customisation">Customisation</string>
+    <string name="setting_clock">Show clock</string>
+    <string name="setting_date">Show date</string>
+    <string name="setting_clock_format">Clock format</string>
+    <string name="clock_auto">Auto</string>
+    <string name="clock_h12">12-hour</string>
+    <string name="clock_h24">24-hour</string>
+    <string name="setting_icon_size">Icon size</string>
+    <string name="setting_label_size">Label size</string>
+    <string name="setting_motion_intensity">Motion intensity</string>
+    <string name="setting_motion_intensity_summary">How much the ocean drifts and flows</string>
+    <string name="setting_panel_opacity">Glass opacity</string>
+    <string name="setting_panel_opacity_summary">How solid the frosted panels are</string>
+    <string name="setting_dock_scale">Dock icon size</string>
+    <string name="percent_value">%1$d%%</string>
     <string name="section_about">About</string>
 
     <string name="setting_theme">Theme</string>

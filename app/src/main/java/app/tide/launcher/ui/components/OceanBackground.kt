@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import app.tide.launcher.ui.theme.LocalMotionIntensity
 import app.tide.launcher.ui.theme.LocalOceanPalette
 import app.tide.launcher.ui.theme.OceanPalette
 
@@ -58,9 +59,13 @@ private const val RENDER_SCALE = 3f
 @Composable
 fun OceanBackground(
     modifier: Modifier = Modifier,
-    motion: Boolean = true,
+    enabled: Boolean = true,
 ) {
     val palette = LocalOceanPalette.current
+    // Below ~4% there is nothing left to see, so the animation is stopped
+    // outright rather than burning frames on motion nobody can perceive.
+    val intensity = (LocalMotionIntensity.current * if (enabled) 1f else 0f)
+    val animating = intensity > 0.04f
 
     val transition = rememberInfiniteTransition(label = "ocean")
 
@@ -93,8 +98,8 @@ fun OceanBackground(
         if (w <= 0f || h <= 0f) return@Canvas
 
         // Read in draw scope: invalidates draw only.
-        val p = if (motion) phase else 0f
-        val g = if (motion) glowPhase else 0.5f
+        val p = if (animating) phase * intensity else 0f
+        val g = if (animating) glowPhase else 0.5f
 
         val buffer = layers.bufferFor(w, h)
         val canvas = buffer.canvas

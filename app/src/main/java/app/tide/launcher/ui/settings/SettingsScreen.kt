@@ -2,6 +2,7 @@ package app.tide.launcher.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import kotlin.math.roundToInt
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,8 @@ import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,6 +44,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.tide.launcher.R
 import app.tide.launcher.data.AppEntry
+import app.tide.launcher.data.ClockFormat
 import app.tide.launcher.data.IconShape
 import app.tide.launcher.data.TideSettings
 import app.tide.launcher.ui.components.GlassSurface
@@ -67,6 +71,13 @@ fun SettingsScreen(
     onIconShapeChange: (IconShape) -> Unit,
     onColumnsChange: (Int) -> Unit,
     onShowLabelsChange: (Boolean) -> Unit,
+    onShowClockChange: (Boolean) -> Unit,
+    onShowDateChange: (Boolean) -> Unit,
+    onClockFormatChange: (ClockFormat) -> Unit,
+    onIconScaleChange: (Float) -> Unit,
+    onLabelScaleChange: (Float) -> Unit,
+    onMotionIntensityChange: (Float) -> Unit,
+    onPanelOpacityChange: (Float) -> Unit,
     onOceanMotionChange: (Boolean) -> Unit,
     onBlurChange: (Boolean) -> Unit,
     onDoubleTapChange: (Boolean) -> Unit,
@@ -177,6 +188,105 @@ fun SettingsScreen(
                     summary = stringResource(R.string.setting_hide_labels_summary),
                     checked = settings.showLabels,
                     onCheckedChange = onShowLabelsChange,
+                )
+            }
+        }
+
+        // ── customisation ───────────────────────────────────────────────────
+        item(key = "sec_customisation") {
+            SectionLabel(stringResource(R.string.section_customisation))
+        }
+
+        item(key = "clock_card") {
+            GlassCard {
+                Column(Modifier.padding(vertical = 4.dp)) {
+                    SwitchRow(
+                        title = stringResource(R.string.setting_clock),
+                        summary = null,
+                        checked = settings.showClock,
+                        onCheckedChange = onShowClockChange,
+                    )
+                    SwitchRow(
+                        title = stringResource(R.string.setting_date),
+                        summary = null,
+                        checked = settings.showDate,
+                        onCheckedChange = onShowDateChange,
+                    )
+                }
+            }
+        }
+
+        item(key = "clock_format") {
+            GlassCard {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.setting_clock_format),
+                        style = TideTypography.titleMedium,
+                        color = palette.onGlass,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ClockFormat.entries.forEach { format ->
+                            SegmentOption(
+                                label = stringResource(
+                                    when (format) {
+                                        ClockFormat.Auto -> R.string.clock_auto
+                                        ClockFormat.H12 -> R.string.clock_h12
+                                        ClockFormat.H24 -> R.string.clock_h24
+                                    },
+                                ),
+                                selected = settings.clockFormat == format,
+                                onClick = { onClockFormatChange(format) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item(key = "icon_scale") {
+            GlassCard {
+                SliderRow(
+                    title = stringResource(R.string.setting_icon_size),
+                    value = settings.iconScale,
+                    range = 0.7f..1.3f,
+                    onChange = onIconScaleChange,
+                )
+            }
+        }
+
+        item(key = "label_scale") {
+            GlassCard {
+                SliderRow(
+                    title = stringResource(R.string.setting_label_size),
+                    value = settings.labelScale,
+                    range = 0.85f..1.2f,
+                    onChange = onLabelScaleChange,
+                )
+            }
+        }
+
+        item(key = "motion_intensity") {
+            GlassCard {
+                SliderRow(
+                    title = stringResource(R.string.setting_motion_intensity),
+                    summary = stringResource(R.string.setting_motion_intensity_summary),
+                    value = settings.motionIntensity,
+                    range = 0f..1f,
+                    onChange = onMotionIntensityChange,
+                )
+            }
+        }
+
+        item(key = "panel_opacity") {
+            GlassCard {
+                SliderRow(
+                    title = stringResource(R.string.setting_panel_opacity),
+                    summary = stringResource(R.string.setting_panel_opacity_summary),
+                    value = settings.panelOpacity,
+                    range = 0.35f..1f,
+                    onChange = onPanelOpacityChange,
                 )
             }
         }
@@ -487,6 +597,106 @@ private fun StepperRow(
             icon = Icons.Rounded.Add,
             enabled = canIncrement,
             onClick = onIncrement,
+        )
+    }
+}
+
+/**
+ * One option in a segmented control.
+ *
+ * Distinct from [ShapeOption], which previews an icon shape rather than
+ * carrying a text label.
+ */
+@Composable
+private fun SegmentOption(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val palette = LocalOceanPalette.current
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(Radius.pill))
+            .background(
+                if (selected) palette.accent.copy(alpha = 0.22f)
+                else Color.Transparent,
+            )
+            .border(
+                width = 1.dp,
+                color = if (selected) palette.accent
+                else palette.onSurfaceMuted.copy(alpha = 0.28f),
+                shape = RoundedCornerShape(Radius.pill),
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = TideTypography.labelLarge,
+            color = if (selected) palette.accent else palette.onGlass,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/**
+ * A labelled slider for the continuous customisation values.
+ *
+ * A slider rather than a stepper: icon size, motion and glass opacity are all
+ * "somewhere around here" adjustments, and dragging shows the effect while the
+ * finger is still down. The value is only committed through [onChange] as the
+ * slider moves, and the store clamps it, so a half-finished drag still leaves a
+ * valid preference behind.
+ */
+@Composable
+private fun SliderRow(
+    title: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    onChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    summary: String? = null,
+) {
+    val palette = LocalOceanPalette.current
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = title,
+                style = TideTypography.bodyLarge,
+                color = palette.onGlass,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = stringResource(
+                    R.string.percent_value,
+                    (value * 100).roundToInt(),
+                ),
+                style = TideTypography.titleMedium,
+                color = palette.accent,
+            )
+        }
+        if (summary != null) {
+            Text(
+                text = summary,
+                style = TideTypography.bodyMedium,
+                color = palette.onSurfaceMuted,
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onChange,
+            valueRange = range,
+            colors = SliderDefaults.colors(
+                thumbColor = palette.accent,
+                activeTrackColor = palette.accent,
+                inactiveTrackColor = palette.onSurfaceMuted.copy(alpha = 0.3f),
+            ),
         )
     }
 }

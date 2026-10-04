@@ -43,6 +43,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -67,6 +70,7 @@ import app.tide.launcher.ui.components.AppIcon
 import app.tide.launcher.ui.components.AppIconTile
 import app.tide.launcher.ui.components.GlassPill
 import app.tide.launcher.ui.components.toShape
+import app.tide.launcher.ui.theme.LocalIconScale
 import app.tide.launcher.ui.theme.LocalOceanPalette
 import app.tide.launcher.ui.theme.Radius
 import app.tide.launcher.ui.theme.TideTypography
@@ -105,6 +109,7 @@ fun HomeSurface(
     onOpenSettings: () -> Unit,
     onReorderDock: (from: Int, to: Int) -> Unit,
     onLongPressEmpty: () -> Unit,
+    onIconBounds: (key: String, rect: Rect) -> Unit,
     widgetSlot: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -116,13 +121,14 @@ fun HomeSurface(
     }
 
     val screenHeightDp = configuration.screenHeightDp
-    val iconSize = remember(screenHeightDp) {
-        when {
-            screenHeightDp < 640 -> 46.dp
-            screenHeightDp < 720 -> 52.dp
-            else -> 58.dp
-        }
+    val baseIconSize = when {
+        screenHeightDp < 640 -> 46.dp
+        screenHeightDp < 720 -> 52.dp
+        else -> 58.dp
     }
+    // One knob for every icon on the home screen and in the dock, so the whole
+    // surface resizes together rather than each grid cell drifting apart.
+    val iconSize = baseIconSize * LocalIconScale.current
 
     Column(
         modifier = modifier
@@ -199,6 +205,7 @@ fun HomeSurface(
                                 shape = iconShape,
                                 showLabel = showLabels,
                                 iconSize = iconSize,
+                                onBounds = { rect -> onIconBounds(item.entry.key, rect) },
                                 onClick = { onLaunch(item.entry) },
                                 onLongClick = { onLongPress(item.entry) },
                             )
@@ -228,6 +235,7 @@ fun HomeSurface(
             onLongPress = onLongPress,
             onOpenSettings = onOpenSettings,
             onReorder = onReorderDock,
+            onIconBounds = onIconBounds,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
                 .padding(horizontal = 16.dp),
@@ -374,6 +382,7 @@ private fun Dock(
     onLongPress: (AppEntry) -> Unit,
     onOpenSettings: () -> Unit,
     onReorder: (from: Int, to: Int) -> Unit,
+    onIconBounds: (key: String, rect: Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var draggingIndex by remember { mutableIntStateOf(-1) }
@@ -406,6 +415,7 @@ private fun Dock(
                         dragging = index == draggingIndex,
                         dragOffset = dragOffsetX,
                         onClick = { onLaunch(entry) },
+                        onIconBounds = { rect -> onIconBounds(entry.key, rect) },
                         onDragStart = {
                             draggingIndex = index
                             dragOffsetX = 0f
@@ -442,6 +452,7 @@ private fun DockIcon(
     dragging: Boolean,
     dragOffset: Float,
     onClick: () -> Unit,
+    onIconBounds: (Rect) -> Unit,
     onDragStart: () -> Unit,
     onDragDelta: (Float) -> Unit,
     /** [moved] is false when the finger lifted without travelling. */
@@ -470,6 +481,7 @@ private fun DockIcon(
             .offset { IntOffset(dragOffset.roundToInt(), 0) }
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(CircleShape)
+            .onGloballyPositioned { onIconBounds(it.boundsInRoot()) }
             // `combinedClickable` deliberately has no onLongClick here. It and
             // detectDragGesturesAfterLongPress both fire on the same hold, so
             // whichever ran first won and long-pressing a dock icon only ever

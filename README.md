@@ -13,6 +13,7 @@
 <p align="center">
   <img src="docs/screens/search.png" width="30%" alt="Fuzzy search matching 'gm' to Gmail">
   <img src="docs/screens/settings.png" width="30%" alt="Settings: theme swatches, icon shapes, grid density">
+  <img src="docs/screens/onboarding.png" width="30%" alt="First-run onboarding: theme picker over the live home screen">
 </p>
 
 [![build](https://github.com/loak7993-code/tide/actions/workflows/build.yml/badge.svg)](https://github.com/loak7993-code/tide/actions/workflows/build.yml)
@@ -50,11 +51,14 @@ busy enough to compete with the icons on top of it.
 | **Long press** | Pin to dock, file into a folder, hide, app info, uninstall, declared shortcuts. |
 | **Home menu** | Long-press empty space for *Add widget* and *Home screen settings*. |
 | **Widgets** | Lists every installed widget provider and hosts the ones you place. |
-| **Ocean motion** | Layered animated background; can be switched off in Settings. |
+| **App-open animation** | The tapped icon itself grows from its own position to fill the screen, over a fading scrim, then hands off. Not an instant cut. |
+| **Ocean motion** | Layered animated background; can be switched off, or dialled from nothing to full drift. |
 | **Four themes** | Sunrise (light), Tide, Deep, Night tide — each a full palette, not a hue rotation. |
 | **Icon shapes** | Squircle, circle or rounded, applied live without re-rasterising. |
 | **Undo** | Hiding or unpinning is reversible from the notice bar. |
 | **Frame overlay** | Optional live FPS, p95 frame time, jank percentage and heap usage. |
+| **Onboarding** | Four steps on first launch: what Tide is, the gestures that are not discoverable by looking, a theme picked against the live background, and a ready state. |
+| **Customisation** | Clock and date on or off, 12/24-hour or follow-the-device, icon size, label size, motion intensity and glass opacity — all live. |
 
 ## Install
 
@@ -175,8 +179,11 @@ gesture, and a release without movement is reinterpreted as a long press.
 ## Status
 
 Working and installable — verified on an API 35 emulator. 21 unit tests over the
-scorer and settings invariants, and 6 Compose instrumentation tests driving the
-home screen, drawer, search, home menu and settings.
+scorer and settings invariants, and 7 Compose instrumentation tests driving the
+home screen, drawer, search, home menu, settings and customisation. The launch
+handover was confirmed by recording the screen and diffing frames at 30 fps; the
+customisation sliders were confirmed by driving them through the UI and checking
+the effect on the home screen.
 
 **Widgets are half-done.** The host plumbing is in place and works: the provider
 list is enumerated, the picker renders, the host id is persisted, and the render
@@ -195,6 +202,9 @@ Not done yet:
 - Grid drag-and-drop (only the dock reorders)
 - Folders cannot nest, and are created one app at a time rather than by
   multi-selecting
+- The ocean's caustic and horizon-glow layers still do not render — the shaders
+  are built with a radius of 1px while the shapes are hundreds of pixels wide,
+  so they collapse to a dot. Only the depth gradient, vignette and shimmer draw
 
 ## Licence
 

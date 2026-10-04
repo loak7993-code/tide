@@ -2,6 +2,8 @@ package app.tide.launcher
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.longClick
@@ -13,7 +15,11 @@ import app.tide.launcher.ui.home.TEST_TAG_HOME
 import app.tide.launcher.ui.home.TEST_TAG_OPEN_DRAWER
 import app.tide.launcher.ui.components.TEST_TAG_HOME_MENU_SETTINGS
 import app.tide.launcher.ui.components.TEST_TAG_HOME_MENU_WIDGET
+import app.tide.launcher.ui.onboarding.TEST_TAG_ONBOARDING
+import app.tide.launcher.ui.onboarding.TEST_TAG_ONBOARDING_NEXT
+import app.tide.launcher.ui.onboarding.TEST_TAG_ONBOARDING_SKIP
 import app.tide.launcher.ui.home.TEST_TAG_OPEN_DRAWER
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,6 +40,34 @@ class TideLauncherTest {
 
     @get:Rule
     val compose = createAndroidComposeRule<MainActivity>()
+
+    /**
+     * Clears first-run onboarding before each test.
+     *
+     * On a fresh install the flow covers the whole home screen, so every other
+     * assertion in this class would be reading a tree it cannot see through.
+     * Skipping rather than finishing, so the tests do not depend on how many
+     * steps the flow happens to have.
+     */
+    @Before
+    fun dismissOnboarding() {
+        if (compose.onAllNodesWithTag(TEST_TAG_ONBOARDING).fetchSemanticsNodes().isEmpty()) {
+            return
+        }
+        // "Skip" only appears from the second step onwards.
+        compose.onNodeWithTag(TEST_TAG_ONBOARDING_NEXT).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(TEST_TAG_ONBOARDING_SKIP).performClick()
+        // Skipping fades the flow out before persisting the flag, and that
+        // fade is a real `delay` rather than a Compose animation — so
+        // `waitForIdle()` returns while the overlay is still up and still
+        // swallowing touches. Wait for it to actually leave the tree.
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag(TEST_TAG_ONBOARDING)
+                .fetchSemanticsNodes()
+                .isEmpty()
+        }
+    }
 
     @Test
     fun homeSurfaceRenders() {
@@ -91,6 +125,19 @@ class TideLauncherTest {
     fun homeMenuOffersWidgetPicker() {
         openHomeMenu()
         compose.onNodeWithTag(TEST_TAG_HOME_MENU_WIDGET).assertIsDisplayed()
+    }
+
+    /**
+     * The customisation section has to exist *and* be reachable, not merely
+     * compile — it is the first thing added under the "customise everything"
+     * request and it is entirely additive UI over existing settings.
+     */
+    @Test
+    fun customisationSectionIsReachable() {
+        openHomeMenu()
+        compose.onNodeWithTag(TEST_TAG_HOME_MENU_SETTINGS).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag("section_customisation").assertIsDisplayed()
     }
 
     /** Long-presses empty home space, below whatever apps are installed. */

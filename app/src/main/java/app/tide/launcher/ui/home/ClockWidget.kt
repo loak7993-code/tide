@@ -28,6 +28,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.tide.launcher.data.ClockFormat
+import app.tide.launcher.ui.theme.LocalClockFormat
+import app.tide.launcher.ui.theme.LocalShowClock
+import app.tide.launcher.ui.theme.LocalShowDate
 import app.tide.launcher.ui.theme.LocalOceanPalette
 import app.tide.launcher.ui.theme.Motion
 import app.tide.launcher.ui.theme.TideTypography
@@ -35,6 +39,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -72,24 +77,48 @@ fun ClockWidget(modifier: Modifier = Modifier) {
         // clock re-formats when the user changes locale; the direct read is not
         // an observable state and would leave the old format on screen.
         val locale = LocalConfiguration.current.locales[0]
-        val clockFormat = remember(locale) { DateTimeFormatter.ofPattern("HH:mm", locale) }
+        val formatPref = LocalClockFormat.current
+        val context = LocalContext.current
+        val clockFormat = remember(locale, formatPref, context) {
+            DateTimeFormatter.ofPattern(
+                when (formatPref) {
+                    ClockFormat.H12 -> "h:mm a"
+                    ClockFormat.H24 -> "HH:mm"
+                    // The device decides: 12-hour where the locale uses it, 24-hour
+                    // where it does not. Guessing the other way round is the classic
+                    // launcher bug — a 13:45 clock showing "1:45 pm".
+                    ClockFormat.Auto ->
+                        if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm"
+                        else "h:mm a"
+                },
+                locale,
+            )
+        }
         val dateFormat = remember(locale) {
             DateTimeFormatter.ofPattern("EEEE d MMMM", locale)
         }
 
-        Text(
-            text = now.format(clockFormat),
-            style = TideTypography.displayLarge,
-            color = palette.onSurface,
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = greeting(now.hour) + " · " + now.format(dateFormat),
-            style = TideTypography.bodyLarge,
-            color = palette.onSurfaceMuted,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(20.dp))
+        if (LocalShowClock.current) {
+            Text(
+                text = now.format(clockFormat),
+                style = TideTypography.displayLarge,
+                color = palette.onSurface,
+            )
+        }
+        if (LocalShowClock.current && LocalShowDate.current) {
+            Spacer(Modifier.height(2.dp))
+        }
+        if (LocalShowDate.current) {
+            Text(
+                text = greeting(now.hour) + " · " + now.format(dateFormat),
+                style = TideTypography.bodyLarge,
+                color = palette.onSurfaceMuted,
+                textAlign = TextAlign.Center,
+            )
+        }
+        if (LocalShowClock.current || LocalShowDate.current) {
+            Spacer(Modifier.height(20.dp))
+        }
         TideGauge(progress = dayFraction, modifier = Modifier.padding(horizontal = 48.dp))
     }
 }

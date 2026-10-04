@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.tide.launcher.ui.theme.GlassCorner
 import app.tide.launcher.ui.theme.LocalOceanPalette
+import app.tide.launcher.ui.theme.LocalPanelOpacity
 import app.tide.launcher.ui.theme.Radius
 
 /**
@@ -45,6 +46,7 @@ fun GlassSurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val palette = LocalOceanPalette.current
+    val panelOpacity = LocalPanelOpacity.current
 
     Box(
         modifier = modifier
@@ -59,8 +61,12 @@ fun GlassSurface(
             // more light on the face that is angled toward the source.
             .background(
                 Brush.verticalGradient(
-                    0f to palette.glass.copy(alpha = palette.glass.alpha * 1.25f),
-                    1f to palette.glass.copy(alpha = palette.glass.alpha * 0.75f),
+                    0f to palette.glass.copy(
+                        alpha = (palette.glass.alpha * 1.25f * panelOpacity).coerceAtMost(0.95f),
+                    ),
+                    1f to palette.glass.copy(
+                        alpha = (palette.glass.alpha * 0.75f * panelOpacity).coerceAtMost(0.95f),
+                    ),
                 ),
             )
             .then(
