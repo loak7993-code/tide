@@ -16,6 +16,7 @@
 </p>
 
 [![build](https://github.com/loak7993-code/tide/actions/workflows/build.yml/badge.svg)](https://github.com/loak7993-code/tide/actions/workflows/build.yml)
+[![release](https://img.shields.io/github/v/release/loak7993-code/tide?label=release&color=57B7C9)](https://github.com/loak7993-code/tide/releases/latest)
 [![kotlin](https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?style=flat&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![compose](https://img.shields.io/badge/Jetpack%20Compose-2026.09-4285F4?style=flat&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![minsdk](https://img.shields.io/badge/minSdk-26-green?style=flat)](https://developer.android.com/about/versions/oreo)
@@ -56,9 +57,14 @@ busy enough to compete with the icons on top of it.
 
 ## Install
 
-Tide is not on the Play Store. Grab the release APK from
-[the build artifacts](https://github.com/loak7993-code/tide/actions/workflows/build.yml),
-or build it yourself:
+**[![Download v1.0.0](https://img.shields.io/badge/download-tide--1.0.0.apk-57B7C9?style=flat-square&logo=android)](https://github.com/loak7993-code/tide/releases/download/v1.0.0/tide-1.0.0.apk)
+([releases](https://github.com/loak7993-code/tide/releases/latest))**
+
+Requires Android 8.0 (API 26) or newer. The published APK is signed with the
+**debug key** — it installs and runs, but supply a `keystore.properties` to
+produce a Play-ready signed build.
+
+Or build it yourself:
 
 ```bash
 git clone https://github.com/loak7993-code/tide.git
