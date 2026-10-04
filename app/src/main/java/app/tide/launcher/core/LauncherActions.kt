@@ -105,6 +105,18 @@ object LauncherActions {
         context.startActivitySafely(intent, "settings")
     }
 
+    /**
+     * Starts a settings activity, guarded.
+     *
+     * Per-app detail screens are addressed by intent extra or URI scheme
+     * rather than by component, so they can be missing or renamed on a given
+     * OEM build; [startActivitySafely] logs and moves on rather than crashing
+     * the launcher out from under the user.
+     */
+    fun startSettings(context: Context, intent: Intent) {
+        context.startActivitySafely(intent, "app-settings")
+    }
+
     private fun Context.startActivitySafely(intent: Intent, tag: String) {
         try {
             startActivity(intent)

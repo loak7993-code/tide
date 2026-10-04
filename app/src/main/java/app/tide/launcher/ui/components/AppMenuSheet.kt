@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -73,6 +74,7 @@ fun AppMenuSheet(
     onToggleDock: () -> Unit,
     onToggleHide: () -> Unit,
     onAddToFolder: () -> Unit,
+    onAppSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -104,6 +106,11 @@ fun AppMenuSheet(
             icon = if (isHidden) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
             label = stringResource(if (isHidden) R.string.action_unhide else R.string.action_hide),
             onClick = { onToggleHide(); onDismiss() },
+        ),
+        MenuAction(
+            icon = Icons.Rounded.Settings,
+            label = stringResource(R.string.app_settings),
+            onClick = { onAppSettings() },
         ),
         MenuAction(
             icon = Icons.Rounded.Info,

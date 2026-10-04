@@ -65,6 +65,7 @@ import app.tide.launcher.data.IconCache
 import app.tide.launcher.debug.logi
 import app.tide.launcher.ui.components.GlassSurface
 import app.tide.launcher.ui.components.HomeMenuSheet
+import app.tide.launcher.ui.appdetails.AppDetailsScreen
 import app.tide.launcher.ui.onboarding.OnboardingFlow
 import app.tide.launcher.ui.components.LaunchEasing
 import app.tide.launcher.ui.components.LaunchTransition
@@ -113,6 +114,7 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
     var showWidgetPicker by remember { mutableStateOf(false) }
     // The app whose "Add to folder" was tapped; the picker acts on it.
     var folderTarget by remember { mutableStateOf<AppEntry?>(null) }
+    var detailsTarget by remember { mutableStateOf<AppEntry?>(null) }
     var showHomeMenu by remember { mutableStateOf(false) }
 
     // The launch handover. Tiles report their bounds as they lay out, so the
@@ -344,6 +346,9 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
         // On home, back is swallowed: a launcher that exits on back leaves the
         // user staring at whatever was behind it.
         BackHandler(enabled = state.surface == Surface.Home) { }
+        // The per-app page is a plain overlay, so it needs its own back
+        // handler; the surface-based one above would not see it.
+        BackHandler(enabled = detailsTarget != null) { detailsTarget = null }
 
         // ── long-press sheet ─────────────────────────────────────────────────
         state.menuFor?.let { entry ->
@@ -356,6 +361,10 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
                 onAddToFolder = {
                     viewModel.dismissMenu()
                     folderTarget = entry
+                },
+                onAppSettings = {
+                    viewModel.dismissMenu()
+                    detailsTarget = entry
                 },
             )
         }
@@ -388,6 +397,20 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
                     showHomeMenu = false
                     viewModel.setSurface(Surface.Settings)
                 },
+            )
+        }
+
+        // ── per-app settings ─────────────────────────────────────────────────
+        // An overlay rather than a surface: it sits on top of whichever surface
+        // the long-press came from, so backing out of it returns to where the
+        // user was instead of always landing on Home.
+        detailsTarget?.let { target ->
+            AppDetailsScreen(
+                entry = target,
+                iconShape = state.settings.iconShape,
+                contentPadding = WindowInsets.systemBars.asPaddingValues(),
+                onBack = { detailsTarget = null },
+                onClose = { detailsTarget = null },
             )
         }
 
