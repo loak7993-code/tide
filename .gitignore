@@ -1,0 +1,31 @@
+# Gradle
+.gradle/
+build/
+local.properties
+captures/
+.cxx/
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+release/
+
+# Signing material — never commit a keystore or its passwords
+keystore.properties
+*.jks
+*.keystore
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+
+# OS
+Thumbs.db
+
+# Local build logs
+*.log

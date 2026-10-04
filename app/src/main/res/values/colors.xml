@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Kept in sync with ui/theme/OceanPalette.kt. The splash screen needs a
+         static colour before Compose exists, so the anchor lives here too. -->
+    <color name="ocean_deep">#062A3D</color>
+    <color name="ocean_mid">#0B6E8F</color>
+    <color name="ocean_light">#37B7C9</color>
+    <color name="foam">#E8F7FA</color>
+</resources>

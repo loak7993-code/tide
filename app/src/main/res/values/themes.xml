@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The launcher draws its own edge-to-edge background, so the window has to
+         stay transparent; a non-transparent windowBackground is what produces the
+         black flash before Compose's first frame lands. -->
+    <style name="Theme.Tide" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <!-- Held only until Compose takes over, so it matches the top of the ocean
+         gradient rather than flashing white. -->
+    <style name="Theme.Tide.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ocean_deep</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Tide</item>
+    </style>
+</resources>
