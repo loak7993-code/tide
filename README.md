@@ -67,7 +67,7 @@ busy enough to compete with the icons on top of it.
 
 ## Install
 
-**[![Download](https://img.shields.io/badge/download-tide--1.1.0.apk-57B7C9?style=flat-square&logo=android)](https://github.com/loak7993-code/tide/releases/latest/download/tide-1.1.0.apk)
+**[![Download](https://img.shields.io/badge/download-tide--1.2.0.apk-57B7C9?style=flat-square&logo=android)](https://github.com/loak7993-code/tide/releases/latest/download/tide-1.2.0.apk)
 ([releases](https://github.com/loak7993-code/tide/releases/latest))**
 
 Requires Android 8.0 (API 26) or newer. The published APK is signed with the
