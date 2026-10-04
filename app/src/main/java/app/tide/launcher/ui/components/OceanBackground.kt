@@ -14,13 +14,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import app.tide.launcher.ui.theme.LocalMotionIntensity
+import kotlinx.coroutines.delay
 import app.tide.launcher.ui.theme.LocalOceanPalette
 import app.tide.launcher.ui.theme.OceanPalette
 
@@ -83,16 +83,14 @@ fun OceanBackground(
     val tick = remember { mutableLongStateOf(0L) }
     LaunchedEffect(animating) {
         if (!animating) return@LaunchedEffect
-        val period = FRAME_INTERVAL_MS * 1_000_000L
-        val start = withFrameNanos { it }
-        var last = start
         while (true) {
-            withFrameNanos { now ->
-                if (now - last >= period) {
-                    last = now
-                    tick.value = now
-                }
-            }
+            // `delay`, not a `withFrameNanos` loop: awaiting a frame requests
+            // one unconditionally, which both defeats the throttle and leaves
+            // Compose permanently non-idle — enough to time out every UI test.
+            // A timer only wakes up to invalidate the draw, and the display
+            // keeps its own vsync cadence.
+            delay(FRAME_INTERVAL_MS)
+            tick.longValue = System.nanoTime()
         }
     }
 

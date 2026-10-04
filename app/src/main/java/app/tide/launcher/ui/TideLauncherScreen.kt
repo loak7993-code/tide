@@ -76,6 +76,10 @@ import app.tide.launcher.ui.drawer.DrawerScreen
 import app.tide.launcher.ui.home.HomeSurface
 import app.tide.launcher.ui.settings.SettingsScreen
 import app.tide.launcher.ui.theme.LocalClockFormat
+import app.tide.launcher.ui.theme.LocalDockScale
+import app.tide.launcher.ui.theme.LocalFontScale
+import app.tide.launcher.ui.theme.LocalGridSpacing
+import app.tide.launcher.ui.theme.LocalShowSearchBar
 import app.tide.launcher.ui.theme.LocalIconScale
 import app.tide.launcher.ui.theme.LocalLabelScale
 import app.tide.launcher.ui.theme.LocalMotionIntensity
@@ -158,7 +162,7 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
         viewModel.openMenu(entry)
     }
 
-    TideTheme(state.settings.theme) {
+    TideTheme(state.settings.theme, fontScale = state.settings.fontScale) {
         CompositionLocalProvider(
             LocalPanelOpacity provides state.settings.panelOpacity,
             LocalLabelScale provides state.settings.labelScale,
@@ -167,6 +171,10 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
             LocalShowClock provides state.settings.showClock,
             LocalShowDate provides state.settings.showDate,
             LocalClockFormat provides state.settings.clockFormat,
+            LocalFontScale provides state.settings.fontScale,
+            LocalGridSpacing provides state.settings.gridSpacing,
+            LocalDockScale provides state.settings.dockIconScale,
+            LocalShowSearchBar provides state.settings.showSearchBar,
         ) {
         // The water behind the status bar is bright in the light theme and deep
         // in the dark ones, so the system bar icon colour has to follow the
@@ -274,6 +282,12 @@ fun TideLauncherScreen(viewModel: LauncherViewModel) {
                         onLabelScaleChange = viewModel::setLabelScale,
                         onMotionIntensityChange = viewModel::setMotionIntensity,
                         onPanelOpacityChange = viewModel::setPanelOpacity,
+                        onFontScaleChange = viewModel::setFontScale,
+                        onGridSpacingChange = viewModel::setGridSpacing,
+                        onDockIconScaleChange = viewModel::setDockIconScale,
+                        onShowSearchBarChange = viewModel::setShowSearchBar,
+                        onShowTideInDrawerChange = viewModel::setShowTideInDrawer,
+                        onSortOrderChange = viewModel::setSortOrder,
                         onOceanMotionChange = viewModel::setOceanMotion,
                         onBlurChange = viewModel::setBlurPanels,
                         onDoubleTapChange = viewModel::setDoubleTapToSearch,

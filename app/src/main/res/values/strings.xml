@@ -59,7 +59,10 @@
     <string name="appdetails_type">Type</string>
     <string name="appdetails_system">System app</string>
     <string name="appdetails_user">Installed by you</string>
-    <string name="appdetails_permissions">Permissions (%1$d of %2$d granted)</string>
+    <plurals name="appdetails_permissions">
+        <item quantity="one">Permissions (%1$d of %2$d granted)</item>
+        <item quantity="other">Permissions (%1$d of %2$d granted)</item>
+    </plurals>
     <string name="appdetails_permissions_short">Permissions</string>
     <string name="appdetails_notifications">Notifications</string>
     <string name="appdetails_links">Links</string>
@@ -69,6 +72,20 @@
     <string name="appdetails_denied">Denied</string>
     <string name="appdetails_manage">Manage</string>
     <string name="appdetails_notification_off">Notifications are off for this app.</string>
+    <string name="section_layout">Layout</string>
+    <string name="setting_font_scale">Font size</string>
+    <string name="setting_font_scale_summary">Scales every text style in the launcher</string>
+    <string name="setting_grid_spacing">Icon spacing</string>
+    <string name="setting_grid_spacing_summary">Gap between grid cells</string>
+    <string name="setting_dock_scale">Dock icon size</string>
+    <string name="setting_search_bar">Swipe hint</string>
+    <string name="setting_search_bar_summary">Show the swipe-to-search bar under the grid</string>
+    <string name="setting_show_tide">Show Tide in the drawer</string>
+    <string name="setting_show_tide_summary">Tide usually hides itself</string>
+    <string name="setting_sort_order">App order</string>
+    <string name="sort_name">Name</string>
+    <string name="sort_label">Label</string>
+    <string name="sort_reverse">Reverse</string>
     <string name="section_customisation">Customisation</string>
     <string name="setting_clock">Show clock</string>
     <string name="setting_date">Show date</string>
@@ -82,7 +99,6 @@
     <string name="setting_motion_intensity_summary">How much the ocean drifts and flows</string>
     <string name="setting_panel_opacity">Glass opacity</string>
     <string name="setting_panel_opacity_summary">How solid the frosted panels are</string>
-    <string name="setting_dock_scale">Dock icon size</string>
     <string name="percent_value">%1$d%%</string>
     <string name="section_about">About</string>
 

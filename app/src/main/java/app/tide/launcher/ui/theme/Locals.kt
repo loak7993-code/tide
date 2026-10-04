@@ -29,3 +29,14 @@ val LocalShowDate = compositionLocalOf { true }
 
 /** 12- or 24-hour, or follow the device locale. */
 val LocalClockFormat = compositionLocalOf { ClockFormat.Auto }
+/** 0.85 to 1.3. Multiplies every text style, not just app labels. */
+val LocalFontScale = compositionLocalOf { 1f }
+
+/** Gap between grid cells as a fraction of cell width. */
+val LocalGridSpacing = compositionLocalOf { 0.35f }
+
+/** Multiplier on dock icon size only. */
+val LocalDockScale = compositionLocalOf { 1f }
+
+/** Whether the swipe-to-search hint sits under the grid. */
+val LocalShowSearchBar = compositionLocalOf { true }

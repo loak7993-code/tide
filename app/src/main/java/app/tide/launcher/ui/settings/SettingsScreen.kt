@@ -46,6 +46,7 @@ import app.tide.launcher.R
 import app.tide.launcher.data.AppEntry
 import app.tide.launcher.data.ClockFormat
 import app.tide.launcher.data.IconShape
+import app.tide.launcher.data.SortOrder
 import app.tide.launcher.data.TideSettings
 import app.tide.launcher.ui.components.GlassSurface
 import app.tide.launcher.ui.theme.LocalOceanPalette
@@ -78,6 +79,12 @@ fun SettingsScreen(
     onLabelScaleChange: (Float) -> Unit,
     onMotionIntensityChange: (Float) -> Unit,
     onPanelOpacityChange: (Float) -> Unit,
+    onFontScaleChange: (Float) -> Unit,
+    onGridSpacingChange: (Float) -> Unit,
+    onDockIconScaleChange: (Float) -> Unit,
+    onShowSearchBarChange: (Boolean) -> Unit,
+    onShowTideInDrawerChange: (Boolean) -> Unit,
+    onSortOrderChange: (SortOrder) -> Unit,
     onOceanMotionChange: (Boolean) -> Unit,
     onBlurChange: (Boolean) -> Unit,
     onDoubleTapChange: (Boolean) -> Unit,
@@ -288,6 +295,94 @@ fun SettingsScreen(
                     range = 0.35f..1f,
                     onChange = onPanelOpacityChange,
                 )
+            }
+        }
+
+        // ── layout ──────────────────────────────────────────────────────────
+        item(key = "sec_layout") {
+            SectionLabel(stringResource(R.string.section_layout))
+        }
+
+        item(key = "font_scale") {
+            GlassCard {
+                SliderRow(
+                    title = stringResource(R.string.setting_font_scale),
+                    summary = stringResource(R.string.setting_font_scale_summary),
+                    value = settings.fontScale,
+                    range = 0.85f..1.3f,
+                    onChange = onFontScaleChange,
+                )
+            }
+        }
+
+        item(key = "grid_spacing") {
+            GlassCard {
+                SliderRow(
+                    title = stringResource(R.string.setting_grid_spacing),
+                    summary = stringResource(R.string.setting_grid_spacing_summary),
+                    value = settings.gridSpacing,
+                    range = 0f..1f,
+                    onChange = onGridSpacingChange,
+                )
+            }
+        }
+
+        item(key = "dock_scale") {
+            GlassCard {
+                SliderRow(
+                    title = stringResource(R.string.setting_dock_scale),
+                    value = settings.dockIconScale,
+                    range = 0.7f..1.3f,
+                    onChange = onDockIconScaleChange,
+                )
+            }
+        }
+
+        item(key = "layout_toggles") {
+            GlassCard {
+                Column(Modifier.padding(vertical = 4.dp)) {
+                    SwitchRow(
+                        title = stringResource(R.string.setting_search_bar),
+                        summary = stringResource(R.string.setting_search_bar_summary),
+                        checked = settings.showSearchBar,
+                        onCheckedChange = onShowSearchBarChange,
+                    )
+                    SwitchRow(
+                        title = stringResource(R.string.setting_show_tide),
+                        summary = stringResource(R.string.setting_show_tide_summary),
+                        checked = settings.showTideInDrawer,
+                        onCheckedChange = onShowTideInDrawerChange,
+                    )
+                }
+            }
+        }
+
+        item(key = "sort_order") {
+            GlassCard {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.setting_sort_order),
+                        style = TideTypography.titleMedium,
+                        color = palette.onGlass,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SortOrder.entries.forEach { order ->
+                            SegmentOption(
+                                label = stringResource(
+                                    when (order) {
+                                        SortOrder.Name -> R.string.sort_name
+                                        SortOrder.Label -> R.string.sort_label
+                                        SortOrder.Reverse -> R.string.sort_reverse
+                                    },
+                                ),
+                                selected = settings.sortOrder == order,
+                                onClick = { onSortOrderChange(order) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
             }
         }
 

@@ -90,6 +90,17 @@ data class TideSettings(
     /** Opacity of the frosted panels, 0.35 to 1. */
     val panelOpacity: Float = 1f,
 
+    // ── layout ──────────────────────────────────────────────────────────────
+    /** Global multiplier on every text style, 0.85 to 1.3. */
+    val fontScale: Float = 1f,
+    /** Gap between grid cells as a fraction of the cell width, 0 to 1. */
+    val gridSpacing: Float = 0.35f,
+    /** Multiplier on dock icon size only, so the hotseat can differ from the grid. */
+    val dockIconScale: Float = 1f,
+    val showSearchBar: Boolean = true,
+    val showTideInDrawer: Boolean = false,
+    val sortOrder: SortOrder = SortOrder.Name,
+
     /** False until the first-run flow has been completed. */
     val onboarded: Boolean = false,
 ) {
@@ -107,6 +118,25 @@ data class TideSettings(
         fun clampIntensity(value: Float): Float = value.coerceIn(0f, 1f)
 
         fun clampPanelOpacity(value: Float): Float = value.coerceIn(0.35f, 1f)
+
+        fun clampFontScale(value: Float): Float = value.coerceIn(0.85f, 1.3f)
+
+        fun clampGridSpacing(value: Float): Float = value.coerceIn(0f, 1f)
+
+        fun clampDockScale(value: Float): Float = value.coerceIn(0.7f, 1.3f)
+    }
+}
+
+/** How the drawer lists apps. */
+enum class SortOrder(val displayName: String) {
+    Name("Name"),
+    Label("Label"),
+    Reverse("Reverse"),
+    ;
+
+    companion object {
+        fun fromName(value: String?): SortOrder =
+            entries.firstOrNull { it.name == value } ?: Name
     }
 }
 
@@ -152,6 +182,12 @@ class SettingsStore(private val context: Context) {
         val labelScale = floatPreferencesKey("label_scale")
         val motionIntensity = floatPreferencesKey("motion_intensity")
         val panelOpacity = floatPreferencesKey("panel_opacity")
+        val fontScale = floatPreferencesKey("font_scale")
+        val gridSpacing = floatPreferencesKey("grid_spacing")
+        val dockIconScale = floatPreferencesKey("dock_icon_scale")
+        val showSearchBar = booleanPreferencesKey("show_search_bar")
+        val showTideInDrawer = booleanPreferencesKey("show_tide_in_drawer")
+        val sortOrder = stringPreferencesKey("sort_order")
         val onboarded = booleanPreferencesKey("onboarded")
     }
 
@@ -188,6 +224,12 @@ class SettingsStore(private val context: Context) {
                 labelScale = TideSettings.clampLabelScale(prefs[Keys.labelScale] ?: 1f),
                 motionIntensity = TideSettings.clampIntensity(prefs[Keys.motionIntensity] ?: 1f),
                 panelOpacity = TideSettings.clampPanelOpacity(prefs[Keys.panelOpacity] ?: 1f),
+                fontScale = TideSettings.clampFontScale(prefs[Keys.fontScale] ?: 1f),
+                gridSpacing = TideSettings.clampGridSpacing(prefs[Keys.gridSpacing] ?: 0.35f),
+                dockIconScale = TideSettings.clampDockScale(prefs[Keys.dockIconScale] ?: 1f),
+                showSearchBar = prefs[Keys.showSearchBar] ?: true,
+                showTideInDrawer = prefs[Keys.showTideInDrawer] ?: false,
+                sortOrder = SortOrder.fromName(prefs[Keys.sortOrder]),
                 onboarded = prefs[Keys.onboarded] ?: false,
             )
         }
@@ -266,6 +308,21 @@ class SettingsStore(private val context: Context) {
         put(Keys.panelOpacity, TideSettings.clampPanelOpacity(value))
 
     suspend fun setOnboarded(done: Boolean) = put(Keys.onboarded, done)
+
+    suspend fun setFontScale(value: Float) =
+        put(Keys.fontScale, TideSettings.clampFontScale(value))
+
+    suspend fun setGridSpacing(value: Float) =
+        put(Keys.gridSpacing, TideSettings.clampGridSpacing(value))
+
+    suspend fun setDockIconScale(value: Float) =
+        put(Keys.dockIconScale, TideSettings.clampDockScale(value))
+
+    suspend fun setShowSearchBar(value: Boolean) = put(Keys.showSearchBar, value)
+
+    suspend fun setShowTideInDrawer(value: Boolean) = put(Keys.showTideInDrawer, value)
+
+    suspend fun setSortOrder(order: SortOrder) = put(Keys.sortOrder, order.name)
 
     private suspend fun <T> put(key: Preferences.Key<T>, value: T) = edit { prefs ->
         prefs[key] = value

@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.Image
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -166,8 +167,9 @@ fun AppDetailsScreen(
             if (d.permissions.isNotEmpty()) {
                 item(key = "sec_perms") {
                     SectionLabel(
-                        stringResource(
-                            R.string.appdetails_permissions,
+                        pluralStringResource(
+                            R.plurals.appdetails_permissions,
+                            d.permissions.size,
                             d.permissions.count { it.granted },
                             d.permissions.size,
                         ),
@@ -471,7 +473,7 @@ private fun formatBytes(bytes: Long): String = when {
     bytes <= 0L -> "—"
     bytes < 1024L -> "$bytes B"
     bytes < 1024L * 1024 -> "${bytes / 1024} KB"
-    else -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+    else -> String.format(Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0))
 }
 
 private fun formatDate(millis: Long): String = if (millis <= 0L) {

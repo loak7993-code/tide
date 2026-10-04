@@ -70,7 +70,10 @@ import app.tide.launcher.ui.components.AppIcon
 import app.tide.launcher.ui.components.AppIconTile
 import app.tide.launcher.ui.components.GlassPill
 import app.tide.launcher.ui.components.toShape
+import app.tide.launcher.ui.theme.LocalDockScale
+import app.tide.launcher.ui.theme.LocalGridSpacing
 import app.tide.launcher.ui.theme.LocalIconScale
+import app.tide.launcher.ui.theme.LocalShowSearchBar
 import app.tide.launcher.ui.theme.LocalOceanPalette
 import app.tide.launcher.ui.theme.Radius
 import app.tide.launcher.ui.theme.TideTypography
@@ -120,6 +123,8 @@ fun HomeSurface(
         56.dp.toPx()
     }
 
+    val spacing = LocalGridSpacing.current
+    val showSearchBar = LocalShowSearchBar.current
     val screenHeightDp = configuration.screenHeightDp
     val baseIconSize = when {
         screenHeightDp < 640 -> 46.dp
@@ -194,8 +199,10 @@ fun HomeSurface(
                     state = gridState,
                     columns = GridCells.Fixed(columns),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.Top),
+                    // Proportional to the cell so the gap reads the same at
+                    // any column count or icon size.
+                    horizontalArrangement = Arrangement.spacedBy((spacing * 40).dp),
+                    verticalArrangement = Arrangement.spacedBy((8 + spacing * 22).dp, Alignment.Top),
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     items(items = items, key = { it.key }) { item ->
@@ -224,13 +231,15 @@ fun HomeSurface(
             }
         }
 
-        SwipeHint(onClick = onOpenSearch)
-        Spacer(Modifier.height(10.dp))
+        if (showSearchBar) {
+            SwipeHint(onClick = onOpenSearch)
+            Spacer(Modifier.height(10.dp))
+        }
 
         Dock(
             apps = dockApps,
             iconShape = iconShape,
-            iconSize = iconSize,
+            iconSize = iconSize * LocalDockScale.current,
             onLaunch = onLaunch,
             onLongPress = onLongPress,
             onOpenSettings = onOpenSettings,

@@ -16,6 +16,10 @@
   <img src="docs/screens/onboarding.png" width="30%" alt="First-run onboarding: theme picker over the live home screen">
 </p>
 
+<p align="center">
+  <img src="docs/screens/app-settings.png" width="30%" alt="Per-app settings: version, permissions and quick actions inside the launcher">
+</p>
+
 [![build](https://github.com/loak7993-code/tide/actions/workflows/build.yml/badge.svg)](https://github.com/loak7993-code/tide/actions/workflows/build.yml)
 [![release](https://img.shields.io/github/v/release/loak7993-code/tide?label=release&color=57B7C9)](https://github.com/loak7993-code/tide/releases/latest)
 [![license](https://img.shields.io/badge/license-MIT-57B7C9?style=flat)](LICENSE)
@@ -58,7 +62,8 @@ busy enough to compete with the icons on top of it.
 | **Undo** | Hiding or unpinning is reversible from the notice bar. |
 | **Frame overlay** | Optional live FPS, p95 frame time, jank percentage and heap usage. |
 | **Onboarding** | Four steps on first launch: what Tide is, the gestures that are not discoverable by looking, a theme picked against the live background, and a ready state. |
-| **Customisation** | Clock and date on or off, 12/24-hour or follow-the-device, icon size, label size, motion intensity and glass opacity — all live. |
+| **Per-app settings** | Long-press any app for a page *inside* the launcher: version, target SDK, size, install dates and every permission with its grant state. |
+| **Customisation** | Clock and date on or off, 12/24-hour or follow-the-device, icon size, label size, motion intensity, glass opacity, font size, icon spacing, dock size, swipe hint, and drawer sort order. |
 
 ## Install
 
@@ -185,6 +190,13 @@ handover was confirmed by recording the screen and diffing frames at 30 fps; the
 customisation sliders were confirmed by driving them through the UI and checking
 the effect on the home screen.
 
+**Scrolling is measured, not guessed.** `dumpsys gfxinfo` on the drawer gives
+85 ms median frames before the ocean was throttled and 77 ms after, measured on
+the same software-rendered emulator. That is a relative number on a host that
+renders the emulator itself, not a device figure — the two most likely remaining
+costs (icon bounds tracking, per-icon shadows) were each removed and re-measured
+and made no difference, so they were put back.
+
 **Widgets are half-done.** The host plumbing is in place and works: the provider
 list is enumerated, the picker renders, the host id is persisted, and the render
 path uses `AppWidgetHost.createView`. But *placing* a widget does not work on the
@@ -202,9 +214,9 @@ Not done yet:
 - Grid drag-and-drop (only the dock reorders)
 - Folders cannot nest, and are created one app at a time rather than by
   multi-selecting
-- The ocean's caustic and horizon-glow layers still do not render — the shaders
-  are built with a radius of 1px while the shapes are hundreds of pixels wide,
-  so they collapse to a dot. Only the depth gradient, vignette and shimmer draw
+- Per-app storage totals and per-app battery are absent from the app settings
+  page: both need permissions a launcher cannot hold. It shows the APK size it
+  can stat instead of inventing a number
 
 ## Licence
 

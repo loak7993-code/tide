@@ -91,3 +91,38 @@ val AppLabelStyle = TextStyle(
     letterSpacing = 0.1.sp,
     textAlign = TextAlign.Center,
 )
+
+/**
+ * The type ramp with the user's font scale applied.
+ *
+ * Scaling here rather than at each call site means a change reaches the clock,
+ * the settings rows, the drawer and the sheets at once — which is the point of
+ * a font-size preference. Line heights scale with the size, since they are
+ * absolute sp and would otherwise clip descenders at larger settings.
+ */
+fun scaledTypography(scale: Float): Typography = Typography(
+    displayLarge = TideTypography.displayLarge.scaled(scale),
+    displayMedium = TideTypography.displayMedium.scaled(scale),
+    displaySmall = TideTypography.displaySmall.scaled(scale),
+    headlineLarge = TideTypography.headlineLarge.scaled(scale),
+    headlineMedium = TideTypography.headlineMedium.scaled(scale),
+    headlineSmall = TideTypography.headlineSmall.scaled(scale),
+    titleLarge = TideTypography.titleLarge.scaled(scale),
+    titleMedium = TideTypography.titleMedium.scaled(scale),
+    titleSmall = TideTypography.titleSmall.scaled(scale),
+    bodyLarge = TideTypography.bodyLarge.scaled(scale),
+    bodyMedium = TideTypography.bodyMedium.scaled(scale),
+    bodySmall = TideTypography.bodySmall.scaled(scale),
+    labelLarge = TideTypography.labelLarge.scaled(scale),
+    labelMedium = TideTypography.labelMedium.scaled(scale),
+    labelSmall = TideTypography.labelSmall.scaled(scale),
+)
+
+private fun TextStyle.scaled(factor: Float): TextStyle = if (factor == 1f) {
+    this
+} else {
+    copy(
+        fontSize = fontSize * factor,
+        lineHeight = lineHeight * factor,
+    )
+}

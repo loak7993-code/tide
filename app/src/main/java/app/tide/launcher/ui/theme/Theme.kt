@@ -23,6 +23,7 @@ val LocalTideTheme = staticCompositionLocalOf { TideTheme.Default }
 @Composable
 fun TideTheme(
     theme: TideTheme = TideTheme.Default,
+    fontScale: Float = 1f,
     content: @Composable () -> Unit,
 ) {
     val palette = theme.palette
@@ -68,7 +69,7 @@ fun TideTheme(
     ) {
         MaterialTheme(
             colorScheme = scheme,
-            typography = TideTypography,
+            typography = scaledTypography(fontScale),
             shapes = TideShapes,
             content = content,
         )

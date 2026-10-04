@@ -114,6 +114,10 @@ object AppDetailsRepository {
      * system Settings screen makes.
      */
     private fun notificationsEnabled(context: Context, appInfo: ApplicationInfo): Boolean {
+        // Per-app notification state has no pre-29 public read. Rather than
+        // report the *global* setting as if it were this app's, say allowed:
+        // the row links to the system screen, which is authoritative anyway.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true
         val ops = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
             ?: return true
         val mode = runCatching {
@@ -205,12 +209,8 @@ object AppDetailsRepository {
     fun openNotificationSettings(context: Context, pkg: String) =
         LauncherActions.startSettings(
             context,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                    .putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
-            } else {
-                appInfoIntent(pkg)
-            },
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, pkg),
         )
 
     fun openPermissions(context: Context, pkg: String) =
@@ -229,6 +229,7 @@ object AppDetailsRepository {
                 appInfoIntent(pkg)
             },
         )
+
 
     fun requestUninstall(context: Context, pkg: String) =
         LauncherActions.startSettings(

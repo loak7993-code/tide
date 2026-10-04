@@ -10,6 +10,7 @@ import app.tide.launcher.data.Folder
 import app.tide.launcher.data.Fuzzy
 import app.tide.launcher.data.IconShape
 import app.tide.launcher.data.SettingsStore
+import app.tide.launcher.data.SortOrder
 import app.tide.launcher.data.TideSettings
 import app.tide.launcher.debug.logi
 import app.tide.launcher.ui.theme.TideTheme
@@ -58,8 +59,23 @@ data class LauncherUiState(
     val loading: Boolean = true,
 ) {
     /** Everything the user has not hidden, in alphabetical order. */
-    val visibleApps: List<AppEntry> =
-        allApps.filterNot { it.key in settings.hiddenApps }
+    /**
+     * What the drawer lists: everything not hidden, ordered as the user asked,
+     * and with Tide itself excluded unless they asked to see it.
+     *
+     * A launcher that appears in its own drawer is a launcher you have to skip
+     * past every time you want to open something else, so it is opt-in.
+     */
+    val visibleApps: List<AppEntry> = allApps
+        .filterNot { it.key in settings.hiddenApps }
+        .filter { settings.showTideInDrawer || !it.isSelf }
+        .let { apps ->
+            when (settings.sortOrder) {
+                SortOrder.Name -> apps.sortedBy { it.label.lowercase() }
+                SortOrder.Label -> apps.sortedBy { it.label }
+                SortOrder.Reverse -> apps.sortedByDescending { it.label.lowercase() }
+            }
+        }
 
     /** Pinned apps, in the order the user arranged them. */
     val dockApps: List<AppEntry> =
@@ -358,6 +374,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun setLabelScale(scale: Float) = viewModelScope.launch { store.setLabelScale(scale) }
     fun setMotionIntensity(value: Float) = viewModelScope.launch { store.setMotionIntensity(value) }
     fun setPanelOpacity(value: Float) = viewModelScope.launch { store.setPanelOpacity(value) }
+    fun setFontScale(value: Float) = viewModelScope.launch { store.setFontScale(value) }
+    fun setGridSpacing(value: Float) = viewModelScope.launch { store.setGridSpacing(value) }
+    fun setDockIconScale(value: Float) = viewModelScope.launch { store.setDockIconScale(value) }
+    fun setShowSearchBar(value: Boolean) = viewModelScope.launch { store.setShowSearchBar(value) }
+    fun setShowTideInDrawer(value: Boolean) = viewModelScope.launch { store.setShowTideInDrawer(value) }
+    fun setSortOrder(order: SortOrder) = viewModelScope.launch { store.setSortOrder(order) }
     fun completeOnboarding() = viewModelScope.launch { store.setOnboarded(true) }
 
     /**
